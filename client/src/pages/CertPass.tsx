@@ -65,7 +65,7 @@ export default function CertPass() {
 
     try {
       const apiUrl = typeof window !== "undefined" && window.location.hostname === "hamsign.vercel.app"
-        ? "https://ipasigner-ghsfrzbn.manus.space/api/change-cert-password"
+        ? "https://3000-ibvzjilgclojwsp9jp48v-89566439.us2.manus.computer/api/change-cert-password"
         : "/api/change-cert-password";
       
       const res = await fetch(apiUrl, {

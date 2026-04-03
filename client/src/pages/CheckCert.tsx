@@ -54,7 +54,7 @@ export default function CheckCert() {
 
     try {
       const apiUrl = typeof window !== "undefined" && window.location.hostname === "hamsign.vercel.app"
-        ? "https://ipasigner-ghsfrzbn.manus.space/api/check-cert"
+        ? "https://3000-ibvzjilgclojwsp9jp48v-89566439.us2.manus.computer/api/check-cert"
         : "/api/check-cert";
       
       const res = await fetch(apiUrl, {
