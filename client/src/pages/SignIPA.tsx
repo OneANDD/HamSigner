@@ -397,11 +397,11 @@ export default function SignIPA() {
                   onChange={(e) => {
                     if (e.target.value) {
                       const apps = [
-                        { id: 'ksign', name: 'KSign', bundleId: 'com.ksign.app' },
-                        { id: 'esign', name: 'ESign', bundleId: 'com.esign.app' },
-                        { id: 'feather', name: 'Feather', bundleId: 'com.feather.app' },
-                        { id: 'gbox', name: 'GBox', bundleId: 'com.gbox.app' },
-                        { id: 'scarlet', name: 'Scarlet', bundleId: 'com.scarlet.app' },
+                        { id: 'ksign', name: 'KSign', bundleId: 'nya.asami.ksign' },
+                        { id: 'esign', name: 'ESign', bundleId: 'com.khoindvn.esign' },
+                        { id: 'feather', name: 'Feather', bundleId: 'thewonderofyou.Feather' },
+                        { id: 'gbox', name: 'GBox', bundleId: 'com.ncs.gbox' },
+                        { id: 'scarlet', name: 'Scarlet', bundleId: 'com.DebianArch.ScarletPersonalXYZ' },
                       ];
                       const selected = apps.find(a => a.id === e.target.value);
                       if (selected) {
