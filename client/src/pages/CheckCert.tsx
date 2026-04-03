@@ -53,7 +53,11 @@ export default function CheckCert() {
     if (password) formData.append("password", password);
 
     try {
-      const res = await fetch("/api/check-cert", {
+      const apiUrl = typeof window !== "undefined" && window.location.hostname === "hamsign.vercel.app"
+        ? "https://ipasigner-ghsfrzbn.manus.space/api/check-cert"
+        : "/api/check-cert";
+      
+      const res = await fetch(apiUrl, {
         method: "POST",
         body: formData,
       });

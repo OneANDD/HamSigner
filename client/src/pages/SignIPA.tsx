@@ -338,8 +338,12 @@ export default function SignIPA() {
 
     try {
       const signingTimer = setTimeout(() => setStage("signing"), 1500);
+      
+      const apiUrl = typeof window !== "undefined" && window.location.hostname === "hamsign.vercel.app"
+        ? "https://ipasigner-ghsfrzbn.manus.space/api/sign"
+        : "/api/sign";
 
-      const res = await fetch("/api/sign", {
+      const res = await fetch(apiUrl, {
         method: "POST",
         body: formData,
       });

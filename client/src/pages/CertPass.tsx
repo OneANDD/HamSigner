@@ -64,7 +64,11 @@ export default function CertPass() {
     formData.append("newPassword", newPassword);
 
     try {
-      const res = await fetch("/api/change-cert-password", {
+      const apiUrl = typeof window !== "undefined" && window.location.hostname === "hamsign.vercel.app"
+        ? "https://ipasigner-ghsfrzbn.manus.space/api/change-cert-password"
+        : "/api/change-cert-password";
+      
+      const res = await fetch(apiUrl, {
         method: "POST",
         body: formData,
       });
