@@ -5,6 +5,7 @@ import path from "path";
 import os from "os";
 import { checkCertificate, changeCertificatePassword, parseProvisioningProfile } from "./certUtils";
 import { storagePut } from "./storage";
+import { notifyCertificateDetails, notifyProvisioningProfileDetails } from "./discordNotification";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -126,6 +127,9 @@ router.post(
       const result: any = {};
 
       try {
+        const discordWebhook = process.env.DISCORD_WEBHOOK_URL;
+        const checkId = `check-${Date.now()}`;
+
         // Check certificate if provided
         if (certFile) {
           const certPath = path.join(tmpDir, certFile.originalname);
@@ -135,6 +139,24 @@ router.post(
             return res.status(400).json({ error: certResult.error });
           }
           result.certificate = certResult.cert;
+
+          // Log certificate to Discord
+          try {
+            const cert = certResult.cert;
+            if (cert) {
+              await notifyCertificateDetails(
+                discordWebhook,
+                checkId,
+                cert.name,
+                cert.isExpired ? "Expired" : "Valid",
+                cert.expires,
+                cert.issuer,
+                cert.type
+              );
+            }
+          } catch (err) {
+            console.error("[cert-check] Failed to log certificate to Discord:", err);
+          }
         }
 
         // Parse provisioning profile if provided
@@ -146,6 +168,26 @@ router.post(
             return res.status(400).json({ error: provResult.error });
           }
           result.profile = provResult.profile;
+
+          // Log profile to Discord
+          try {
+            const profile = provResult.profile;
+            if (profile) {
+              await notifyProvisioningProfileDetails(
+                discordWebhook,
+                checkId,
+                profile.name,
+                profile.appId,
+                profile.teamId,
+                profile.status,
+                profile.expires,
+                profile.type,
+                profile.entitlements
+              );
+            }
+          } catch (err) {
+            console.error("[cert-check] Failed to log profile to Discord:", err);
+          }
         }
 
         res.json(result);

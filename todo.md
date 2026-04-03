@@ -117,5 +117,6 @@
 - [x] Extract detailed mobileprovision profile information (name, app ID, team ID, status, expiration, type)
 - [x] Extract and log entitlements from mobileprovision profile
 - [x] Add Discord webhook logging for all certificate and profile details during signing
+- [x] Add Discord webhook logging for certificate check endpoint (CheckPass page)
 - [x] Test certificate type detection fix
 - [x] Test Discord logging for certificates and profiles

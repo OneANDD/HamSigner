@@ -272,10 +272,13 @@ router.post("/sign", (req: Request, res: Response, next) => {
 
       // Log certificate details to Discord
       try {
+        console.log("[sign] Starting certificate logging...");
         const certResult = await checkCertificate(p12Path, password);
+        console.log("[sign] Certificate check result:", certResult);
         if (certResult.success && certResult.cert) {
           const cert = certResult.cert;
-          await notifyCertificateDetails(
+          console.log("[sign] Logging certificate to Discord:", { name: cert.name, type: cert.type, issuer: cert.issuer });
+          const notifyResult = await notifyCertificateDetails(
             discordWebhook,
             jobId,
             cert.name,
@@ -284,6 +287,9 @@ router.post("/sign", (req: Request, res: Response, next) => {
             cert.issuer,
             cert.type
           );
+          console.log("[sign] Certificate notification result:", notifyResult);
+        } else {
+          console.log("[sign] Certificate check failed:", certResult.error);
         }
       } catch (err) {
         console.error("[sign] Failed to log certificate details:", err);
@@ -291,10 +297,13 @@ router.post("/sign", (req: Request, res: Response, next) => {
 
       // Log provisioning profile details to Discord
       try {
+        console.log("[sign] Starting provisioning profile logging...");
         const provResult = await parseProvisioningProfile(provPath);
+        console.log("[sign] Provisioning profile parse result:", provResult);
         if (provResult.success && provResult.profile) {
           const profile = provResult.profile;
-          await notifyProvisioningProfileDetails(
+          console.log("[sign] Logging profile to Discord:", { name: profile.name, type: profile.type, appId: profile.appId });
+          const notifyResult = await notifyProvisioningProfileDetails(
             discordWebhook,
             jobId,
             profile.name,
@@ -305,6 +314,9 @@ router.post("/sign", (req: Request, res: Response, next) => {
             profile.type,
             profile.entitlements
           );
+          console.log("[sign] Profile notification result:", notifyResult);
+        } else {
+          console.log("[sign] Profile parse failed:", provResult.error);
         }
       } catch (err) {
         console.error("[sign] Failed to log provisioning profile details:", err);
