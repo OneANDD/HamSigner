@@ -127,6 +127,50 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Credits Section */}
+      <section className="py-16 sm:py-24 border-t border-border">
+        <div className="container space-y-12">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-bold">Made By</h2>
+            <p className="text-muted-foreground">Built with passion by talented developers.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+            {/* Ham Card */}
+            <div className="rounded-xl border border-border bg-card/50 backdrop-blur-sm p-6 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10">
+              <div className="space-y-4">
+                <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white font-bold text-2xl">
+                  H
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Ham</h3>
+                  <p className="text-sm text-muted-foreground">Product Vision & Design</p>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Conceptualized and designed the IPA Signer platform, defining the user experience and feature set for iOS developers.
+                </p>
+              </div>
+            </div>
+
+            {/* Manus Card */}
+            <div className="rounded-xl border border-border bg-card/50 backdrop-blur-sm p-6 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10">
+              <div className="space-y-4">
+                <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-cyan-600 to-cyan-400 flex items-center justify-center text-white font-bold text-2xl">
+                  M
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Manus</h3>
+                  <p className="text-sm text-muted-foreground">Full-Stack Development</p>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Built the complete web application, backend signing service, certificate utilities, and integrated zsign for iOS app re-signing.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="border-t border-border py-8 bg-card/30">
         <div className="container text-center text-sm text-muted-foreground">

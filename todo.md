@@ -45,3 +45,4 @@
 - [x] Remove PFX reference from P12 certificate file label in Change Pass page
 - [x] Fix nested anchor tag error on Change Pass page
 - [x] Fix nested anchor tag error on Landing page
+- [x] Add credits section at bottom of homepage with Ham and Manus cards
