@@ -22,3 +22,11 @@
 ## Tests
 - [x] Vitest: signing job status transitions
 - [x] Vitest: ITMS manifest plist generation
+
+## New Features
+- [x] Update theme to dark blue & black space aesthetic
+- [x] Homepage landing page with 3-feature menu cards
+- [x] Persistent navigation bar across all pages
+- [x] Check Certificate Validity feature (expiry, OCSP, chain)
+- [x] Change Certificate Password feature
+- [x] File size warning on Sign IPA page

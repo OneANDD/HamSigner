@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import signRoute from "../signRoute";
+import certRoutes from "../certRoutes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -38,6 +39,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // IPA signing REST endpoints (multipart, not tRPC)
   app.use("/api", signRoute);
+  // Certificate checking and password changing endpoints
+  app.use("/api", certRoutes);
   // tRPC API
   app.use(
     "/api/trpc",

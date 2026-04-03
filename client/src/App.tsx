@@ -4,17 +4,25 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
+import { Navigation } from "./components/Navigation";
+import Landing from "./pages/Landing";
+import SignIPA from "./pages/SignIPA";
+import CheckCert from "./pages/CheckCert";
+import CertPass from "./pages/CertPass";
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <Navigation />
+      <Switch>
+        <Route path={"/"} component={Landing} />
+        <Route path={"/signipa"} component={SignIPA} />
+        <Route path={"/checkcert"} component={CheckCert} />
+        <Route path={"/certpass"} component={CertPass} />
+        <Route path={"/404"} component={NotFound} />
+        <Route component={NotFound} />
+      </Switch>
+    </>
   );
 }
 
