@@ -102,7 +102,7 @@ export default router;
 
 /**
  * POST /api/check-cert-and-profile
- * Check both P12 certificate and provisioning profile
+ * Check P12 certificate and/or provisioning profile (at least one required)
  */
 router.post(
   "/check-cert-and-profile",
@@ -117,35 +117,38 @@ router.post(
       const provFile = files?.mobileprovision?.[0];
       const password = req.body.password || "";
 
-      if (!certFile || !provFile) {
-        return res.status(400).json({ error: "Both certificate and provisioning profile files are required" });
+      if (!certFile && !provFile) {
+        return res.status(400).json({ error: "At least one file (P12 certificate or provisioning profile) is required" });
       }
 
       // Create temp directory
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cert-profile-check-"));
-      const certPath = path.join(tmpDir, certFile.originalname);
-      const provPath = path.join(tmpDir, provFile.originalname);
-
-      fs.writeFileSync(certPath, certFile.buffer);
-      fs.writeFileSync(provPath, provFile.buffer);
+      const result: any = {};
 
       try {
-        // Check certificate
-        const certResult = await checkCertificate(certPath, password);
-        if (!certResult.success) {
-          return res.status(400).json({ error: certResult.error });
+        // Check certificate if provided
+        if (certFile) {
+          const certPath = path.join(tmpDir, certFile.originalname);
+          fs.writeFileSync(certPath, certFile.buffer);
+          const certResult = await checkCertificate(certPath, password);
+          if (!certResult.success) {
+            return res.status(400).json({ error: certResult.error });
+          }
+          result.certificate = certResult.cert;
         }
 
-        // Parse provisioning profile
-        const provResult = await parseProvisioningProfile(provPath);
-        if (!provResult.success) {
-          return res.status(400).json({ error: provResult.error });
+        // Parse provisioning profile if provided
+        if (provFile) {
+          const provPath = path.join(tmpDir, provFile.originalname);
+          fs.writeFileSync(provPath, provFile.buffer);
+          const provResult = await parseProvisioningProfile(provPath);
+          if (!provResult.success) {
+            return res.status(400).json({ error: provResult.error });
+          }
+          result.profile = provResult.profile;
         }
 
-        res.json({
-          certificate: certResult.cert,
-          profile: provResult.profile,
-        });
+        res.json(result);
       } finally {
         fs.rmSync(tmpDir, { recursive: true, force: true });
       }

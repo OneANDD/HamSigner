@@ -67,8 +67,8 @@ export default function CheckCert() {
 
   const handleCheck = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!certFile || !provFile) {
-      setError("Both P12 certificate and provisioning profile are required");
+    if (!certFile && !provFile) {
+      setError("At least one file (P12 certificate or provisioning profile) is required");
       return;
     }
 
@@ -77,8 +77,8 @@ export default function CheckCert() {
     setResult(null);
 
     const formData = new FormData();
-    formData.append("cert", certFile);
-    formData.append("mobileprovision", provFile);
+    if (certFile) formData.append("cert", certFile);
+    if (provFile) formData.append("mobileprovision", provFile);
     if (password) formData.append("password", password);
 
     try {
@@ -221,7 +221,7 @@ export default function CheckCert() {
               <div className="flex gap-2 pt-2">
                 <Button
                   type="submit"
-                  disabled={!certFile || !provFile || loading}
+                  disabled={(!certFile && !provFile) || loading}
                   className="flex-1"
                 >
                   {loading ? (
