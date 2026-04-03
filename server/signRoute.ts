@@ -155,7 +155,7 @@ router.post("/sign", (req: Request, res: Response) => {
       const { url: manifestUrl } = await storagePut(
         manifestKey,
         Buffer.from(manifestXml, "utf8"),
-        "text/xml"
+        "application/x-plist"
       );
 
       // ---- Update job as done ----
