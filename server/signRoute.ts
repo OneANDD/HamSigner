@@ -119,13 +119,12 @@ router.post("/sign", (req: Request, res: Response) => {
       const signedIpaName = `signed_${ipaOriginalName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const outputPath = path.join(tmpDir, signedIpaName);
 
-      const signingResult = await signIpa({
-        ipaPath: ipaPath,
-        p12Path: p12File.path,
-        provPath: provFile.path,
+      const signingResult = await signIpa(
+        ipaPath,
+        p12File.path,
         password,
-        outputPath,
-      });
+        provFile.path
+      );
 
       if (!signingResult.success) {
         await updateSigningJob(jobId, {
@@ -137,9 +136,9 @@ router.post("/sign", (req: Request, res: Response) => {
 
       // ---- Extract metadata ----
       const meta = await extractIpaMetadata(outputPath);
-      const appName = appNameOverride || meta.appName || ipaOriginalName.replace(/\.ipa$/i, "");
-      const bundleId = bundleIdOverride || meta.bundleId || "com.unknown.app";
-      const appVersion = meta.appVersion || "1.0";
+      const appName = appNameOverride || (meta.appName as string) || ipaOriginalName.replace(/\.ipa$/i, "");
+      const bundleId = bundleIdOverride || (meta.bundleId as string) || "com.unknown.app";
+      const appVersion = (meta.appVersion as string) || "1.0";
 
       // ---- Upload signed IPA to S3 ----
       const ipaKey = `signed/${jobId}/${signedIpaName}`;
