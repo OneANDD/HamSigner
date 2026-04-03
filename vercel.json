@@ -1,6 +1,15 @@
 {
   "version": 2,
-  "buildCommand": "pnpm vercel-build",
-  "outputDirectory": "client/dist",
-  "installCommand": "pnpm install"
+  "buildCommand": "pnpm build",
+  "outputDirectory": "dist",
+  "installCommand": "pnpm install",
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "server/_core/index.ts": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 900
+    }
+  }
 }
