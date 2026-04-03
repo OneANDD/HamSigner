@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "cd client && pnpm install && pnpm build",
+  "buildCommand": "pnpm install && cd client && pnpm build",
   "outputDirectory": "client/dist",
-  "installCommand": "echo skip-root-install",
+  "installCommand": "echo skip",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
