@@ -1,18 +1,9 @@
 {
-  "buildCommand": "pnpm build",
-  "outputDirectory": "dist",
-  "framework": "vite",
-  "env": {
-    "NODE_ENV": "production"
-  },
+  "version": 2,
+  "buildCommand": "cd client && pnpm install && pnpm build",
+  "outputDirectory": "client/dist",
+  "installCommand": "echo skip-root-install",
   "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
-    },
-    {
-      "source": "/:path*",
-      "destination": "/index.html"
-    }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
