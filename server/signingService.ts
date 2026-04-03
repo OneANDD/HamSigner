@@ -52,7 +52,8 @@ export async function signIpa(input: SigningInput): Promise<SigningResult> {
   args.push(ipaPath);
 
   try {
-    const { stdout, stderr } = await execFileAsync("/usr/local/bin/zsign", args, {
+    const zsignPath = process.env.ZSIGN_PATH || "/usr/local/bin/zsign";
+    const { stdout, stderr } = await execFileAsync(zsignPath, args, {
       timeout: 300_000, // 5 minutes max
       maxBuffer: 10 * 1024 * 1024,
     });

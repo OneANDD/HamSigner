@@ -93,5 +93,5 @@
 
 ## Railway Deployment
 - [x] Fix Dockerfile zsign compilation error (use pre-built binary instead)
-- [ ] Test Railway deployment with fixed Dockerfile
-- [ ] Verify IPA signing works on Railway
+- [x] Test Railway deployment with fixed Dockerfile
+- [x] Verify IPA signing works on Railway

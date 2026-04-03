@@ -25,9 +25,10 @@ export async function checkCertificate(
   }
 
   try {
-    // Read P12 file as binary string
+    // Read P12 file and convert to binary string for forge
     const p12Buffer = fs.readFileSync(p12Path);
-    const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(p12Buffer));
+    const p12BinaryString = p12Buffer.toString('binary');
+    const p12Asn1 = forge.asn1.fromDer(p12BinaryString);
 
     // Decrypt P12
     let pkcs12: any;
@@ -123,7 +124,8 @@ export async function changeCertificatePassword(
   try {
     // Read and decrypt the original P12
     const p12Buffer = fs.readFileSync(p12Path);
-    const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(p12Buffer));
+    const p12BinaryString = p12Buffer.toString('binary');
+    const p12Asn1 = forge.asn1.fromDer(p12BinaryString);
 
     let pkcs12: any;
     try {
