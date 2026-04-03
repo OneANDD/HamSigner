@@ -1,6 +1,5 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -102,97 +101,49 @@ function FileDropZone({ label, accept, icon, file, onFile, disabled, hint, maxSi
           type="file"
           accept={accept}
           className="hidden"
+          onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
           disabled={disabled}
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
         />
-        <div className="flex items-center gap-3 px-4 py-3">
-          <div className="text-muted-foreground">{icon}</div>
-          <div className="text-left">
-            <div className="text-sm font-medium text-foreground">{file?.name || label}</div>
-            {!file && <div className="text-xs text-muted-foreground">{hint}</div>}
+        <div className="px-6 py-8 text-center">
+          <div className="flex justify-center mb-3 text-muted-foreground">
+            {file ? <CheckCircle2 className="w-8 h-8 text-success" /> : icon}
           </div>
+          <p className="font-medium text-foreground text-sm">{file ? file.name : label}</p>
+          {!file && hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
+          {sizeWarning && <p className="text-xs text-destructive mt-2">File too large (max {maxSize ? (maxSize / 1024 / 1024).toFixed(0) : '?'} MB)</p>}
         </div>
       </div>
-      {sizeWarning && (
-        <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/30 p-3">
-          <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-destructive">
-            This IPA is too big. I recommend installing these by another IPA signer or maybe try a smaller file?
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---- StepIndicator ----
-interface StepIndicatorProps {
-  steps: string[];
-  current: number;
-}
-
-function StepIndicator({ steps, current }: StepIndicatorProps) {
-  return (
-    <div className="flex items-center gap-2">
-      {steps.map((step, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
-              i < current
-                ? "bg-success text-success-foreground"
-                : i === current
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground"
-            }`}
-          >
-            {i < current ? <Check className="w-4 h-4" /> : i + 1}
-          </div>
-          <span className={`text-sm ${i <= current ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-            {step}
-          </span>
-          {i < steps.length - 1 && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-        </div>
-      ))}
     </div>
   );
 }
 
 // ---- CopyButton ----
-interface CopyButtonProps {
-  text: string;
-}
-
-function CopyButton({ text }: CopyButtonProps) {
+function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
-      type="button"
       onClick={() => {
         navigator.clipboard.writeText(text);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }}
-      className="p-1.5 hover:bg-muted rounded transition-colors"
+      className="p-1.5 rounded hover:bg-muted transition-colors"
     >
-      {copied ? (
-        <Check className="w-4 h-4 text-success" />
-      ) : (
-        <Copy className="w-4 h-4 text-muted-foreground hover:text-foreground" />
-      )}
+      {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4 text-muted-foreground" />}
     </button>
   );
 }
 
-// ---- ResultsPanel ----
-interface ResultsPanelProps {
-  result: SignResult;
-}
-
-function ResultsPanel({ result }: ResultsPanelProps) {
+// ---- ResultView ----
+function ResultView({ result }: { result: SignResult }) {
   return (
     <div className="space-y-4">
-      {/* App info */}
-      <div className="rounded-lg bg-muted/50 border border-border px-4 py-3 space-y-1">
+      {/* Summary */}
+      <div className="rounded-lg border border-success/40 bg-success/5 p-4 space-y-2">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <CheckCircle2 className="w-4 h-4 text-success" />
+          Signing Complete
+        </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">App Name</span>
           <span className="font-medium font-mono text-foreground">{result.appName}</span>
@@ -266,6 +217,7 @@ function ResultsPanel({ result }: ResultsPanelProps) {
 export default function SignIPA() {
   const [location] = useLocation();
   const [ipaFile, setIpaFile] = useState<File | null>(null);
+  const [ipaUrl, setIpaUrl] = useState("");
   const [p12File, setP12File] = useState<File | null>(null);
   const [provFile, setProvFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
@@ -291,42 +243,35 @@ export default function SignIPA() {
     }
   }, [location]);
 
-  const canSubmit =
-    (ipaFile !== null || selectedApp !== null) && p12File !== null && provFile !== null && stage === "idle";
-
-  const handleReset = () => {
-    setIpaFile(null);
-    setP12File(null);
-    setProvFile(null);
-    setPassword("");
-    setBundleIdOverride("");
-    setAppNameOverride("");
-    setEntitlements("");
-    setCodeSigningIdentity("auto");
-    setOutputFileName("");
-    setSigningAlgorithm("sha256");
-    setStage("idle");
-    setErrorMsg(null);
-    setResult(null);
-    setSelectedApp(null);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
+
+    if (!p12File || !provFile || !password) {
+      toast.error("P12 certificate, provisioning profile, and password are required");
+      return;
+    }
+
+    if (!ipaFile && !ipaUrl && !selectedApp) {
+      toast.error("Please select an IPA file, paste an IPA URL, or select a pre-configured app");
+      return;
+    }
 
     setStage("uploading");
     setErrorMsg(null);
     setResult(null);
 
     const formData = new FormData();
-    if (selectedApp) {
+    
+    if (ipaFile) {
+      formData.append("ipa", ipaFile);
+    } else if (ipaUrl) {
+      formData.append("ipaUrl", ipaUrl);
+    } else if (selectedApp) {
       formData.append("ipaUrl", APP_IPA_URLS[selectedApp]);
-    } else {
-      formData.append("ipa", ipaFile!);
     }
-    formData.append("p12", p12File!);
-    formData.append("mobileprovision", provFile!);
+
+    formData.append("p12", p12File);
+    formData.append("provision", provFile);
     formData.append("password", password);
     if (bundleIdOverride) formData.append("bundleIdOverride", bundleIdOverride);
     if (appNameOverride) formData.append("appNameOverride", appNameOverride);
@@ -398,15 +343,16 @@ export default function SignIPA() {
                       const apps = [
                         { id: 'ksign', name: 'KSign', bundleId: 'nya.asami.ksign' },
                         { id: 'esign', name: 'ESign', bundleId: 'com.khoindvn.esign' },
-                        { id: 'feather', name: 'Feather', bundleId: 'thewonderofyou.Feather' },
-                        { id: 'scarlet', name: 'Scarlet', bundleId: 'com.DebianArch.ScarletPersonalXYZ' },
+                        { id: 'feather', name: 'Feather', bundleId: 'me.xfsnow.feather' },
+                        { id: 'scarlet', name: 'Scarlet', bundleId: 'com.foxfort.scarlet' },
                       ];
-                      const selected = apps.find(a => a.id === e.target.value);
-                      if (selected) {
-                        setSelectedApp(selected.id);
-                        setAppNameOverride(selected.name);
-                        setBundleIdOverride(selected.bundleId);
+                      const app = apps.find(a => a.id === e.target.value);
+                      if (app) {
+                        setSelectedApp(e.target.value);
+                        setAppNameOverride(app.name);
+                        setBundleIdOverride(app.bundleId);
                         setIpaFile(null);
+                        setIpaUrl("");
                       }
                     } else {
                       setSelectedApp(null);
@@ -426,18 +372,45 @@ export default function SignIPA() {
 
               {/* IPA */}
               {!selectedApp && (
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-foreground">IPA File</Label>
-                  <FileDropZone
-                    label="iOS Application (.ipa)"
-                    accept=".ipa,application/octet-stream"
-                    icon={<Upload className="w-5 h-5" />}
-                    file={ipaFile}
-                    onFile={setIpaFile}
-                    disabled={isProcessing}
-                    hint="Drag & drop or click to select your .ipa file"
-                    maxSize={MAX_FILE_SIZE}
-                  />
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-foreground">IPA File</Label>
+                    <FileDropZone
+                      label="iOS Application (.ipa)"
+                      accept=".ipa,application/octet-stream"
+                      icon={<Upload className="w-5 h-5" />}
+                      file={ipaFile}
+                      onFile={(f) => { setIpaFile(f); setIpaUrl(""); }}
+                      disabled={isProcessing || !!ipaUrl}
+                      hint="Drag & drop or click to select your .ipa file"
+                      maxSize={MAX_FILE_SIZE}
+                    />
+                  </div>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-border"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="px-2 bg-card text-muted-foreground">Or</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-foreground">IPA URL</Label>
+                    <Input
+                      type="url"
+                      placeholder="https://example.com/app.ipa"
+                      className="w-full"
+                      disabled={isProcessing || !!ipaFile}
+                      value={ipaUrl}
+                      onChange={(e) => {
+                        setIpaUrl(e.target.value);
+                        if (e.target.value) setIpaFile(null);
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">Paste a direct link to an .ipa file</p>
+                  </div>
                 </div>
               )}
               {selectedApp && (
@@ -459,236 +432,97 @@ export default function SignIPA() {
                   file={p12File}
                   onFile={setP12File}
                   disabled={isProcessing}
-                  hint="Your Apple distribution or developer certificate"
+                  hint="Drag & drop or click to select your .p12 certificate"
+                  maxSize={MAX_FILE_SIZE}
                 />
               </div>
 
-              {/* MobileProvision */}
+              {/* Provisioning Profile */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-foreground">MobileProvision File</Label>
+                <Label className="text-sm font-medium text-foreground">Provisioning Profile</Label>
                 <FileDropZone
-                  label="Provisioning Profile (.mobileprovision)"
+                  label="Mobile Provision (.mobileprovision)"
                   accept=".mobileprovision,application/octet-stream"
                   icon={<ShieldCheck className="w-5 h-5" />}
                   file={provFile}
                   onFile={setProvFile}
                   disabled={isProcessing}
-                  hint="Your provisioning profile matching the certificate"
+                  hint="Drag & drop or click to select your .mobileprovision file"
+                  maxSize={MAX_FILE_SIZE}
                 />
               </div>
 
-              {/* Password */}
+              {/* P12 Password */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-foreground">Certificate Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                  <Input
-                    type="password"
-                    placeholder="Enter your P12 certificate password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isProcessing}
-                    className="pl-9"
-                  />
-                </div>
+                <Label className="text-sm font-medium text-foreground">P12 Password</Label>
+                <Input
+                  type="password"
+                  placeholder="Enter P12 certificate password"
+                  className="w-full"
+                  disabled={isProcessing}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
 
               {/* Advanced Options */}
-              <div className="border-t border-border pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                >
-                  <ChevronRight className={`w-4 h-4 transition-transform ${showAdvanced ? "rotate-90" : ""}`} />
-                  Advanced Options
-                </button>
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+              >
+                {showAdvanced ? "Hide" : "Show"} Advanced Options
+                <ChevronRight className={`w-3 h-3 transition-transform ${showAdvanced ? "rotate-90" : ""}`} />
+              </button>
 
-                {showAdvanced && (
-                  <div className="mt-4 space-y-4">
-                    {/* Bundle ID Override */}
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-foreground">Bundle ID Override</Label>
-                      <Input
-                        placeholder="e.g., com.example.myapp"
-                        value={bundleIdOverride}
-                        onChange={(e) => setBundleIdOverride(e.target.value)}
-                        disabled={isProcessing}
-                      />
-                      <p className="text-xs text-muted-foreground">Leave blank to keep original bundle ID</p>
-                    </div>
-
-                    {/* App Name Override */}
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-foreground">App Name Override</Label>
-                      <Input
-                        placeholder="e.g., My Awesome App"
-                        value={appNameOverride}
-                        onChange={(e) => setAppNameOverride(e.target.value)}
-                        disabled={isProcessing}
-                      />
-                      <p className="text-xs text-muted-foreground">Leave blank to keep original app name</p>
-                    </div>
-
-                    {/* Entitlements */}
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-foreground">Entitlements (XML)</Label>
-                      <textarea
-                        placeholder="Paste custom entitlements XML here..."
-                        value={entitlements}
-                        onChange={(e) => setEntitlements(e.target.value)}
-                        disabled={isProcessing}
-                        className="w-full px-3 py-2 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono text-xs resize-none"
-                        rows={4}
-                      />
-                      <p className="text-xs text-muted-foreground">Modify app capabilities (push notifications, app groups, etc.)</p>
-                    </div>
-
-                    {/* Code Signing Identity */}
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-foreground">Code Signing Identity</Label>
-                      <select
-                        className="w-full px-3 py-2 rounded-lg border border-border bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        value={codeSigningIdentity}
-                        onChange={(e) => setCodeSigningIdentity(e.target.value)}
-                        disabled={isProcessing}
-                      >
-                        <option value="auto">Auto-detect</option>
-                        <option value="distribution">Distribution</option>
-                        <option value="development">Development</option>
-                      </select>
-                    </div>
-
-                    {/* Output File Name */}
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-foreground">Output File Name</Label>
-                      <Input
-                        placeholder="e.g., signed-app"
-                        value={outputFileName}
-                        onChange={(e) => setOutputFileName(e.target.value)}
-                        disabled={isProcessing}
-                      />
-                      <p className="text-xs text-muted-foreground">Leave blank for default naming</p>
-                    </div>
-
-                    {/* Signing Algorithm */}
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-foreground">Signing Algorithm</Label>
-                      <select
-                        className="w-full px-3 py-2 rounded-lg border border-border bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        value={signingAlgorithm}
-                        onChange={(e) => setSigningAlgorithm(e.target.value)}
-                        disabled={isProcessing}
-                      >
-                        <option value="sha256">SHA-256 (Recommended)</option>
-                        <option value="sha1">SHA-1 (Legacy)</option>
-                      </select>
-                    </div>
+              {showAdvanced && (
+                <div className="space-y-4 pt-4 border-t border-border">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-foreground">App Name Override</Label>
+                    <Input
+                      placeholder="Leave blank to auto-detect"
+                      className="w-full"
+                      disabled={isProcessing}
+                      value={appNameOverride}
+                      onChange={(e) => setAppNameOverride(e.target.value)}
+                    />
                   </div>
-                )}
-              </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-foreground">Bundle ID Override</Label>
+                    <Input
+                      placeholder="Leave blank to auto-detect"
+                      className="w-full"
+                      disabled={isProcessing}
+                      value={bundleIdOverride}
+                      onChange={(e) => setBundleIdOverride(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Error */}
               {errorMsg && (
-                <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium text-destructive">
-                    <XCircle className="w-4 h-4" />
-                    Signing Failed
-                  </div>
-                  <p className="text-xs text-destructive/80">{errorMsg}</p>
+                <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 flex gap-3">
+                  <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-destructive">{errorMsg}</div>
                 </div>
               )}
 
-              {/* Progress */}
-              {isProcessing && (
-                <div className="rounded-lg border border-primary/40 bg-primary/5 p-4 space-y-3">
-                  <StepIndicator steps={["Upload", "Sign", "Complete"]} current={stage === "signing" ? 1 : 0} />
-                  <Progress value={stage === "signing" ? 66 : 33} />
-                </div>
-              )}
-
-              {/* Submit Button */}
+              {/* Submit */}
               <Button
                 type="submit"
-                disabled={!canSubmit || isProcessing}
+                disabled={isProcessing || (!ipaFile && !ipaUrl && !selectedApp) || !p12File || !provFile || !password}
                 className="w-full"
-                size="lg"
               >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    {stage === "uploading" ? "Uploading..." : "Signing..."}
-                  </>
-                ) : (
-                  "Sign IPA"
-                )}
+                {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {stage === "uploading" ? "Uploading..." : stage === "signing" ? "Signing..." : "Sign IPA"}
               </Button>
             </form>
           </div>
 
-          {/* Results */}
-          {result && (
-            <div className="rounded-xl border border-border bg-card shadow-sm">
-              <div className="px-6 py-5 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-success" />
-                  <h2 className="font-semibold text-foreground">Signing Complete</h2>
-                </div>
-              </div>
-              <div className="px-6 py-5">
-                <ResultsPanel result={result} />
-                <Button
-                  onClick={handleReset}
-                  variant="outline"
-                  className="w-full mt-4"
-                >
-                  Sign Another IPA
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* How it works */}
-          <div className="rounded-xl border border-border bg-card shadow-sm">
-            <div className="px-6 py-5 border-b border-border">
-              <h2 className="font-semibold text-foreground">How it works</h2>
-            </div>
-            <div className="px-6 py-5 space-y-4">
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-semibold text-sm">
-                  1
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground">Upload Files</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Select or upload your IPA file, P12 certificate, and provisioning profile.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-semibold text-sm">
-                  2
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground">Signs the IPA with your certificate on the server</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Our server re-signs the IPA with your certificate and provisioning profile.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-semibold text-sm">
-                  3
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground">Install on Your Device</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Open the ITMS link on your iOS device to install the signed app over-the-air.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Result */}
+          {result && <ResultView result={result} />}
         </div>
       </main>
     </div>
