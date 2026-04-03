@@ -53,3 +53,8 @@
 - [x] Implement app signing flow (pre-populate app name/bundle ID)
 - [x] Add direct download option for signed IPA in results section
 - [x] Update results UI to show both ITMS link and direct download button
+
+## Layout Reorganization
+- [x] Move app selection into Sign IPA page as dropdown/selector above file uploads
+- [x] Remove separate Apps page (integrate into Sign IPA form)
+- [x] Update Navigation to remove Apps link

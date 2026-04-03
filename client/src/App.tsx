@@ -9,7 +9,6 @@ import Landing from "./pages/Landing";
 import SignIPA from "./pages/SignIPA";
 import CheckCert from "./pages/CheckCert";
 import CertPass from "./pages/CertPass";
-import Apps from "./pages/Apps";
 
 function Router() {
   return (
@@ -17,7 +16,6 @@ function Router() {
       <Navigation />
       <Switch>
         <Route path={"/"} component={Landing} />
-        <Route path={"/apps"} component={Apps} />
         <Route path={"/signipa"} component={SignIPA} />
         <Route path={"/checkcert"} component={CheckCert} />
         <Route path={"/certpass"} component={CertPass} />

@@ -387,6 +387,41 @@ export default function SignIPA() {
             </div>
 
             <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
+              {/* App Selection */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-foreground">Select App (Optional)</Label>
+                <select
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const apps = [
+                        { id: 'ksign', name: 'KSign', bundleId: 'com.ksign.app' },
+                        { id: 'esign', name: 'ESign', bundleId: 'com.esign.app' },
+                        { id: 'feather', name: 'Feather', bundleId: 'com.feather.app' },
+                        { id: 'gbox', name: 'GBox', bundleId: 'com.gbox.app' },
+                        { id: 'scarlet', name: 'Scarlet', bundleId: 'com.scarlet.app' },
+                      ];
+                      const selected = apps.find(a => a.id === e.target.value);
+                      if (selected) {
+                        setAppNameOverride(selected.name);
+                        setBundleIdOverride(selected.bundleId);
+                      }
+                    } else {
+                      setAppNameOverride('');
+                      setBundleIdOverride('');
+                    }
+                  }}
+                >
+                  <option value="">-- Custom IPA (No app selected) --</option>
+                  <option value="ksign">KSign</option>
+                  <option value="esign">ESign</option>
+                  <option value="feather">Feather</option>
+                  <option value="gbox">GBox</option>
+                  <option value="scarlet">Scarlet</option>
+                </select>
+                <p className="text-xs text-muted-foreground">Select a pre-configured app or leave blank for custom IPA signing</p>
+              </div>
+
               {/* IPA */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-foreground">IPA File</Label>
