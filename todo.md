@@ -30,3 +30,7 @@
 - [x] Check Certificate Validity feature (expiry, OCSP, chain)
 - [x] Change Certificate Password feature
 - [x] File size warning on Sign IPA page
+
+## Label Updates
+- [x] Change "Check Certificate" to "Check Pass" in navigation and landing page
+- [x] Change "Change Password" to "Change Pass" in navigation and landing page

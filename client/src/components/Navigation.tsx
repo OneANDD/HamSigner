@@ -5,8 +5,8 @@ export function Navigation() {
   const navItems = [
     { href: "/", label: "Home", icon: null },
     { href: "/signipa", label: "Sign IPA", icon: ShieldCheck },
-    { href: "/checkcert", label: "Check Certificate", icon: FileKey },
-    { href: "/certpass", label: "Change Password", icon: Lock },
+    { href: "/checkcert", label: "Check Pass", icon: FileKey },
+    { href: "/certpass", label: "Change Pass", icon: Lock },
   ];
 
   return (

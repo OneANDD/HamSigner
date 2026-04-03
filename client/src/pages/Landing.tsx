@@ -14,14 +14,14 @@ export default function Landing() {
     {
       href: "/checkcert",
       icon: FileKey,
-      title: "Check Certificate Validity",
+      title: "Check Pass",
       description: "Verify your P12 certificates and provisioning profiles. Check expiration dates, OCSP revocation status, and certificate chain validity.",
       color: "from-cyan-600 to-cyan-400",
     },
     {
       href: "/certpass",
       icon: Lock,
-      title: "Change Certificate Password",
+      title: "Change Pass",
       description: "Update the password for your P12 certificate files. Securely change or remove the password protection on your signing certificates.",
       color: "from-indigo-600 to-indigo-400",
     },
