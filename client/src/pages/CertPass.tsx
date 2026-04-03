@@ -142,7 +142,7 @@ export default function CertPass() {
                       {file ? <CheckCircle2 className="w-5 h-5" /> : <Upload className="w-5 h-5" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">P12 / PFX File</p>
+                      <p className="text-sm font-medium text-foreground">P12 File</p>
                       {file ? (
                         <p className="text-xs text-success truncate">{file.name}</p>
                       ) : (

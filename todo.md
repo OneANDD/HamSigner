@@ -40,3 +40,6 @@
 - [x] Reorder certificate fields: IPA File → P12 File → MobileProvision → Password
 - [x] Update P12 label and remove .pfx reference
 - [x] Update "How it works" step 2 to "Signs the IPA with your certificate on the server"
+
+## Bug Fixes
+- [x] Remove PFX reference from P12 certificate file label in Change Pass page
