@@ -157,8 +157,17 @@ export async function changeCertificatePassword(
     // Extract private key and certificates
     const keyBags = pkcs12.getBags({ bagType: forge.pki.oids.keyBag });
     const certBags = pkcs12.getBags({ bagType: forge.pki.oids.certBag });
+    
+    console.log(`[changeCertificatePassword] keyBag OID:`, forge.pki.oids.keyBag);
+    console.log(`[changeCertificatePassword] keyBags:`, keyBags);
+    console.log(`[changeCertificatePassword] keyBags[keyBag]:`, keyBags ? keyBags[forge.pki.oids.keyBag] : 'undefined');
+    console.log(`[changeCertificatePassword] certBags:`, certBags);
 
     if (!keyBags || !keyBags[forge.pki.oids.keyBag] || keyBags[forge.pki.oids.keyBag].length === 0) {
+      console.log(`[changeCertificatePassword] No private key found - returning error`);
+      // Try to get all bags to understand structure
+      const allBags = pkcs12.getBags({});
+      console.log(`[changeCertificatePassword] All bags:`, allBags);
       return { success: false, error: "No private key found in P12 file" };
     }
 
