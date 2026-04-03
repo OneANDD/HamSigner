@@ -10,6 +10,7 @@ export interface CertInfo {
   issuer: string;
   serialNumber: string;
   algorithm: string;
+  type: string; // 'Developer' or 'Enterprise'
 }
 
 /**
@@ -106,6 +107,16 @@ export async function checkCertificate(
       }
     }
 
+    // Determine certificate type (Developer vs Enterprise)
+    let type = "Developer";
+    if (issuer.toLowerCase().includes("enterprise")) {
+      type = "Enterprise";
+    } else if (issuer.toLowerCase().includes("distribution")) {
+      type = "Distribution";
+    } else if (issuer.toLowerCase().includes("developer")) {
+      type = "Developer";
+    }
+
     // Extract serial number
     const serialNumber = cert.serialNumber ? cert.serialNumber.toString(16).toUpperCase() : "Unknown";
 
@@ -125,6 +136,7 @@ export async function checkCertificate(
       issuer,
       serialNumber,
       algorithm,
+      type,
     };
 
     return { success: true, cert: certInfo };
@@ -306,15 +318,30 @@ export async function parseProvisioningProfile(
     const appIdMatch = plistXml.match(/<key>Entitlements<\/key>\s*<dict>([\s\S]*?)<\/dict>/);
     const expirationMatch = plistXml.match(/<key>ExpirationDate<\/key>\s*<date>([^<]+)<\/date>/);
     const bundleIdMatch = plistXml.match(/<key>application-identifier<\/key>\s*<string>([^<]+)<\/string>/);
+    const teamIdMatch = plistXml.match(/<key>com\.apple\.developer\.team-identifier<\/key>\s*<string>([^<]+)<\/string>/);
+    const provisionsAllDevicesMatch = plistXml.match(/<key>ProvisionedDevices<\/key>/);
     
     const name = nameMatch ? nameMatch[1] : "Unknown";
     const appId = bundleIdMatch ? bundleIdMatch[1] : "Unknown";
+    const teamId = teamIdMatch ? teamIdMatch[1] : (appId.split('.')[0] || "Unknown");
     const expirationStr = expirationMatch ? expirationMatch[1] : new Date().toISOString();
     
     const expirationDate = new Date(expirationStr);
     const now = new Date();
     const daysRemaining = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     const isExpired = daysRemaining < 0;
+    
+    // Determine profile type (check ad hoc before distribution to avoid false positives)
+    let profileType = "Development";
+    if (name.toLowerCase().includes("enterprise")) {
+      profileType = "Enterprise";
+    } else if (name.toLowerCase().includes("ad hoc")) {
+      profileType = "Ad Hoc";
+    } else if (name.toLowerCase().includes("distribution") || name.toLowerCase().includes("appstore")) {
+      profileType = "App Store";
+    } else if (!provisionsAllDevicesMatch) {
+      profileType = "Development";
+    }
 
     // Extract entitlements
     const entitlements: Array<{ name: string; enabled: boolean }> = [];
@@ -333,13 +360,13 @@ export async function parseProvisioningProfile(
       profile: {
         name,
         appId,
-        teamId: appId.split('.')[0] || "Unknown",
+        teamId,
         status: isExpired ? "Expired" : "Valid",
         expires: expirationDate.toISOString().split('T')[0],
         daysRemaining,
         isExpired,
         entitlements,
-        type: "Enterprise",
+        type: profileType,
       },
     };
   } catch (err: unknown) {

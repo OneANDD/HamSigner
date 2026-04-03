@@ -110,3 +110,12 @@
 ## Bug Fixes - Bundle IDs
 - [x] Fix Feather bundle ID: changed from me.xfsnow.feather to thewonderofyou.Feather
 - [x] Fix Scarlet bundle ID: changed from com.foxfort.scarlet to com.DebianArch.ScarletPersonalXYZ
+
+## Certificate & Profile Logging to Discord
+- [x] Fix certificate type detection (developer vs enterprise) - now checks issuer field
+- [x] Extract detailed P12 certificate information (name, status, expiration, issuer)
+- [x] Extract detailed mobileprovision profile information (name, app ID, team ID, status, expiration, type)
+- [x] Extract and log entitlements from mobileprovision profile
+- [x] Add Discord webhook logging for all certificate and profile details during signing
+- [x] Test certificate type detection fix
+- [x] Test Discord logging for certificates and profiles

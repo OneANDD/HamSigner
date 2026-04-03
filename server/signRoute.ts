@@ -8,7 +8,8 @@ import https from "https";
 import { storagePut } from "./storage";
 import { createSigningJob, updateSigningJob, getSigningJob } from "./db";
 import { signIpa, extractIpaMetadata, generateManifestPlist } from "./signingService";
-import { notifySigningError, notifySigningSuccess, notifyError } from "./discordNotification";
+import { notifySigningError, notifySigningSuccess, notifyError, notifyCertificateDetails, notifyProvisioningProfileDetails } from "./discordNotification";
+import { checkCertificate, parseProvisioningProfile } from "./certUtils";
 
 const router = express.Router();
 
@@ -268,6 +269,46 @@ router.post("/sign", (req: Request, res: Response, next) => {
 
       const discordWebhook = process.env.DISCORD_WEBHOOK_URL;
       await notifySigningSuccess(discordWebhook, jobId, appName, bundleId, appVersion);
+
+      // Log certificate details to Discord
+      try {
+        const certResult = await checkCertificate(p12Path, password);
+        if (certResult.success && certResult.cert) {
+          const cert = certResult.cert;
+          await notifyCertificateDetails(
+            discordWebhook,
+            jobId,
+            cert.name,
+            cert.isExpired ? "Expired" : "Valid",
+            cert.expires,
+            cert.issuer,
+            cert.type
+          );
+        }
+      } catch (err) {
+        console.error("[sign] Failed to log certificate details:", err);
+      }
+
+      // Log provisioning profile details to Discord
+      try {
+        const provResult = await parseProvisioningProfile(provPath);
+        if (provResult.success && provResult.profile) {
+          const profile = provResult.profile;
+          await notifyProvisioningProfileDetails(
+            discordWebhook,
+            jobId,
+            profile.name,
+            profile.appId,
+            profile.teamId,
+            profile.status,
+            profile.expires,
+            profile.type,
+            profile.entitlements
+          );
+        }
+      } catch (err) {
+        console.error("[sign] Failed to log provisioning profile details:", err);
+      }
 
       return res.json({
         jobId,

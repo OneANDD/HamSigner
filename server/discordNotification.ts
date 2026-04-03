@@ -197,3 +197,136 @@ export async function notifySigningSuccess(
     ],
   });
 }
+
+/**
+ * Send certificate details to Discord
+ */
+export async function notifyCertificateDetails(
+  webhookUrl: string | undefined,
+  jobId: string,
+  certName: string,
+  certStatus: string,
+  expiration: string,
+  issuer: string,
+  certType: string
+): Promise<boolean> {
+  return sendDiscordNotification(webhookUrl, {
+    embeds: [
+      {
+        title: "📜 Certificate Details",
+        color: 3447003, // Blue
+        fields: [
+          {
+            name: "Job ID",
+            value: jobId,
+            inline: true,
+          },
+          {
+            name: "Certificate Name",
+            value: certName,
+            inline: false,
+          },
+          {
+            name: "Certificate Status",
+            value: certStatus,
+            inline: true,
+          },
+          {
+            name: "Certificate Type",
+            value: certType,
+            inline: true,
+          },
+          {
+            name: "Expiration",
+            value: expiration,
+            inline: true,
+          },
+          {
+            name: "Apple Worldwide Developer Relations Issuer",
+            value: issuer,
+            inline: false,
+          },
+        ],
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  });
+}
+
+/**
+ * Send provisioning profile details to Discord
+ */
+export async function notifyProvisioningProfileDetails(
+  webhookUrl: string | undefined,
+  jobId: string,
+  profileName: string,
+  appId: string,
+  teamId: string,
+  profileStatus: string,
+  expiration: string,
+  profileType: string,
+  entitlements: Array<{ name: string; enabled: boolean }>
+): Promise<boolean> {
+  const enabledEntitlements = entitlements
+    .filter((e) => e.enabled)
+    .map((e) => e.name)
+    .slice(0, 10)
+    .join(", ");
+
+  const fields: Array<{ name: string; value: string; inline?: boolean }> = [
+    {
+      name: "Job ID",
+      value: jobId,
+      inline: true,
+    },
+    {
+      name: "Profile Name",
+      value: profileName,
+      inline: false,
+    },
+    {
+      name: "App ID",
+      value: appId,
+      inline: false,
+    },
+    {
+      name: "Team ID",
+      value: teamId,
+      inline: true,
+    },
+    {
+      name: "Profile Status",
+      value: profileStatus,
+      inline: true,
+    },
+    {
+      name: "Profile Type",
+      value: profileType,
+      inline: true,
+    },
+    {
+      name: "Expiration",
+      value: expiration,
+      inline: true,
+    },
+  ];
+
+  if (enabledEntitlements) {
+    fields.push({
+      name: "Enabled Entitlements",
+      value: enabledEntitlements + (entitlements.filter((e) => e.enabled).length > 10 ? "..." : ""),
+      inline: false,
+    });
+  }
+
+  return sendDiscordNotification(webhookUrl, {
+    embeds: [
+      {
+        title: "📱 Provisioning Profile Details",
+        color: 10181046, // Purple
+        fields,
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  });
+}
