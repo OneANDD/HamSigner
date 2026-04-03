@@ -275,6 +275,13 @@ export default function SignIPA() {
   const [p12File, setP12File] = useState<File | null>(null);
   const [provFile, setProvFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
+  const [bundleIdOverride, setBundleIdOverride] = useState("");
+  const [appNameOverride, setAppNameOverride] = useState("");
+  const [entitlements, setEntitlements] = useState("");
+  const [codeSigningIdentity, setCodeSigningIdentity] = useState("auto");
+  const [outputFileName, setOutputFileName] = useState("");
+  const [signingAlgorithm, setSigningAlgorithm] = useState("sha256");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [stage, setStage] = useState<Stage>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [result, setResult] = useState<SignResult | null>(null);
@@ -287,6 +294,12 @@ export default function SignIPA() {
     setP12File(null);
     setProvFile(null);
     setPassword("");
+    setBundleIdOverride("");
+    setAppNameOverride("");
+    setEntitlements("");
+    setCodeSigningIdentity("auto");
+    setOutputFileName("");
+    setSigningAlgorithm("sha256");
     setStage("idle");
     setErrorMsg(null);
     setResult(null);
@@ -305,6 +318,12 @@ export default function SignIPA() {
     formData.append("p12", p12File!);
     formData.append("mobileprovision", provFile!);
     formData.append("password", password);
+    if (bundleIdOverride) formData.append("bundleIdOverride", bundleIdOverride);
+    if (appNameOverride) formData.append("appNameOverride", appNameOverride);
+    if (entitlements) formData.append("entitlements", entitlements);
+    if (codeSigningIdentity !== "auto") formData.append("codeSigningIdentity", codeSigningIdentity);
+    if (outputFileName) formData.append("outputFileName", outputFileName);
+    formData.append("signingAlgorithm", signingAlgorithm);
 
     try {
       const signingTimer = setTimeout(() => setStage("signing"), 1500);
@@ -372,15 +391,29 @@ export default function SignIPA() {
 
               {/* P12 */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-foreground">P12 Certificate</Label>
+                <Label className="text-sm font-medium text-foreground">P12 File</Label>
                 <FileDropZone
-                  label="Certificate (.p12 / .pfx)"
-                  accept=".p12,.pfx,application/x-pkcs12,application/octet-stream"
+                  label="Certificate (.p12)"
+                  accept=".p12,application/x-pkcs12,application/octet-stream"
                   icon={<FileKey className="w-5 h-5" />}
                   file={p12File}
                   onFile={setP12File}
                   disabled={isProcessing}
                   hint="Your Apple distribution or developer certificate"
+                />
+              </div>
+
+              {/* MobileProvision */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-foreground">MobileProvision File</Label>
+                <FileDropZone
+                  label="Provisioning Profile (.mobileprovision)"
+                  accept=".mobileprovision,application/octet-stream"
+                  icon={<ShieldCheck className="w-5 h-5" />}
+                  file={provFile}
+                  onFile={setProvFile}
+                  disabled={isProcessing}
+                  hint="Your Apple provisioning profile"
                 />
               </div>
 
@@ -403,19 +436,120 @@ export default function SignIPA() {
                 </div>
               </div>
 
-              {/* MobileProvision */}
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-foreground">MobileProvision File</Label>
-                <FileDropZone
-                  label="Provisioning Profile (.mobileprovision)"
-                  accept=".mobileprovision,application/octet-stream"
-                  icon={<ShieldCheck className="w-5 h-5" />}
-                  file={provFile}
-                  onFile={setProvFile}
-                  disabled={isProcessing}
-                  hint="Your Apple provisioning profile"
-                />
+              {/* Advanced Options Toggle */}
+              <div
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors border border-border"
+              >
+                <span className="text-sm font-medium text-foreground">{showAdvanced ? "▼" : "▶"} Advanced Options</span>
               </div>
+
+              {/* Advanced Options */}
+              {showAdvanced && (
+                <div className="space-y-4 p-4 rounded-lg bg-muted/30 border border-border">
+                  {/* Bundle ID Override */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="bundleId" className="text-sm font-medium text-foreground">
+                      Bundle ID Override (Optional)
+                    </Label>
+                    <Input
+                      id="bundleId"
+                      type="text"
+                      placeholder="e.g., com.example.myapp"
+                      value={bundleIdOverride}
+                      onChange={(e) => setBundleIdOverride(e.target.value)}
+                      disabled={isProcessing}
+                      className="bg-input border-border text-foreground placeholder:text-muted-foreground"
+                    />
+                    <p className="text-xs text-muted-foreground">Leave blank to keep original bundle ID</p>
+                  </div>
+
+                  {/* App Name Override */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="appName" className="text-sm font-medium text-foreground">
+                      App Name Override (Optional)
+                    </Label>
+                    <Input
+                      id="appName"
+                      type="text"
+                      placeholder="e.g., My Awesome App"
+                      value={appNameOverride}
+                      onChange={(e) => setAppNameOverride(e.target.value)}
+                      disabled={isProcessing}
+                      className="bg-input border-border text-foreground placeholder:text-muted-foreground"
+                    />
+                    <p className="text-xs text-muted-foreground">Leave blank to keep original app name</p>
+                  </div>
+
+                  {/* Entitlements */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="entitlements" className="text-sm font-medium text-foreground">
+                      Entitlements (Optional)
+                    </Label>
+                    <textarea
+                      id="entitlements"
+                      placeholder="Paste XML entitlements here to modify app capabilities"
+                      value={entitlements}
+                      onChange={(e) => setEntitlements(e.target.value)}
+                      disabled={isProcessing}
+                      className="w-full px-3 py-2 rounded-lg bg-input border border-border text-foreground placeholder:text-muted-foreground text-xs font-mono resize-none h-20"
+                    />
+                    <p className="text-xs text-muted-foreground">Advanced: Modify app capabilities and entitlements</p>
+                  </div>
+
+                  {/* Code Signing Identity */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="codeSigningId" className="text-sm font-medium text-foreground">
+                      Code Signing Identity
+                    </Label>
+                    <select
+                      id="codeSigningId"
+                      value={codeSigningIdentity}
+                      onChange={(e) => setCodeSigningIdentity(e.target.value)}
+                      disabled={isProcessing}
+                      className="w-full px-3 py-2 rounded-lg bg-input border border-border text-foreground text-sm"
+                    >
+                      <option value="auto">Auto-detect</option>
+                      <option value="distribution">Distribution</option>
+                      <option value="development">Development</option>
+                    </select>
+                  </div>
+
+                  {/* Output File Name */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="outputName" className="text-sm font-medium text-foreground">
+                      Output File Name (Optional)
+                    </Label>
+                    <Input
+                      id="outputName"
+                      type="text"
+                      placeholder="e.g., signed-app"
+                      value={outputFileName}
+                      onChange={(e) => setOutputFileName(e.target.value)}
+                      disabled={isProcessing}
+                      className="bg-input border-border text-foreground placeholder:text-muted-foreground"
+                    />
+                    <p className="text-xs text-muted-foreground">Leave blank for default naming</p>
+                  </div>
+
+                  {/* Signing Algorithm */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="algorithm" className="text-sm font-medium text-foreground">
+                      Signing Algorithm
+                    </Label>
+                    <select
+                      id="algorithm"
+                      value={signingAlgorithm}
+                      onChange={(e) => setSigningAlgorithm(e.target.value)}
+                      disabled={isProcessing}
+                      className="w-full px-3 py-2 rounded-lg bg-input border border-border text-foreground text-sm"
+                    >
+                      <option value="sha256">SHA-256 (Recommended)</option>
+                      <option value="sha1">SHA-1 (Legacy)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {/* Progress */}
               {(isProcessing || stage === "done") && (
@@ -486,7 +620,7 @@ export default function SignIPA() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
                 { icon: <Upload className="w-4 h-4" />, title: "1. Upload", desc: "Provide your IPA, P12 certificate, and MobileProvision file." },
-                { icon: <ShieldCheck className="w-4 h-4" />, title: "2. Sign", desc: "zsign re-signs the IPA with your certificate on the server." },
+                { icon: <ShieldCheck className="w-4 h-4" />, title: "2. Sign", desc: "Signs the IPA with your certificate on the server." },
                 { icon: <Smartphone className="w-4 h-4" />, title: "3. Install", desc: "Use the ITMS link to install directly on your iOS device." },
               ].map((item) => (
                 <div key={item.title} className="flex gap-2.5">

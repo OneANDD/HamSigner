@@ -34,3 +34,9 @@
 ## Label Updates
 - [x] Change "Check Certificate" to "Check Pass" in navigation and landing page
 - [x] Change "Change Password" to "Change Pass" in navigation and landing page
+
+## HTML File Updates
+- [x] Add all advanced options to Sign IPA section (Bundle ID, App name, Entitlements, Code signing, Output, Signing preferences)
+- [x] Reorder certificate fields: IPA File → P12 File → MobileProvision → Password
+- [x] Update P12 label and remove .pfx reference
+- [x] Update "How it works" step 2 to "Signs the IPA with your certificate on the server"
