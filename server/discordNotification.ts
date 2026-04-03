@@ -75,6 +75,50 @@ export async function sendDiscordNotification(
 }
 
 /**
+ * Send a generic error notification to Discord
+ */
+export async function notifyError(
+  webhookUrl: string | undefined,
+  errorType: string,
+  errorMessage: string,
+  context?: Record<string, string>
+): Promise<boolean> {
+  const fields: Array<{ name: string; value: string; inline?: boolean }> = [
+    {
+      name: "Error Type",
+      value: errorType,
+      inline: true,
+    },
+    {
+      name: "Error Message",
+      value: errorMessage.substring(0, 1024),
+      inline: false,
+    },
+  ];
+
+  if (context) {
+    for (const [key, value] of Object.entries(context)) {
+      fields.push({
+        name: key,
+        value: value.substring(0, 1024),
+        inline: true,
+      });
+    }
+  }
+
+  return sendDiscordNotification(webhookUrl, {
+    embeds: [
+      {
+        title: `⚠️ ${errorType}`,
+        color: 16776960, // Yellow
+        fields,
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  });
+}
+
+/**
  * Send a signing error notification to Discord
  */
 export async function notifySigningError(

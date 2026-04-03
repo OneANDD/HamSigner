@@ -8,7 +8,7 @@ import https from "https";
 import { storagePut } from "./storage";
 import { createSigningJob, updateSigningJob, getSigningJob } from "./db";
 import { signIpa, extractIpaMetadata, generateManifestPlist } from "./signingService";
-import { notifySigningError, notifySigningSuccess } from "./discordNotification";
+import { notifySigningError, notifySigningSuccess, notifyError } from "./discordNotification";
 
 const router = express.Router();
 
@@ -33,15 +33,17 @@ const upload = multer({
     const allowed: Record<string, string[]> = {
       ipa: ["application/octet-stream", "application/zip", "application/x-ios-app"],
       p12: ["application/x-pkcs12", "application/octet-stream"],
-      mobileprovision: ["application/octet-stream"],
+      mobileprovision: ["application/octet-stream", "application/x-apple-aspen-mobileprovision"],
       provision: ["application/octet-stream", "application/x-apple-aspen-mobileprovision"], // Accept both names
     };
     const field = file.fieldname as keyof typeof allowed;
     if (!allowed[field]) {
+      console.error(`[multer] Unexpected field: ${file.fieldname}`);
       return cb(new Error(`Unexpected field: ${file.fieldname}`));
     }
     const mimeTypes = allowed[field];
     if (!mimeTypes.includes(file.mimetype)) {
+      console.error(`[multer] Invalid MIME type for ${field}: ${file.mimetype}. Allowed: ${mimeTypes.join(", ")}`);
       return cb(new Error(`Invalid MIME type for ${field}: ${file.mimetype}`));
     }
     cb(null, true);
@@ -109,7 +111,7 @@ router.post("/sign", (req: Request, res: Response, next) => {
     const allowed: Record<string, string[]> = {
       ipa: ["application/octet-stream", "application/zip", "application/x-ios-app"],
       p12: ["application/x-pkcs12", "application/octet-stream"],
-      mobileprovision: ["application/octet-stream"],
+      mobileprovision: ["application/octet-stream", "application/x-apple-aspen-mobileprovision"],
       provision: ["application/octet-stream", "application/x-apple-aspen-mobileprovision"], // Accept both names
     };
     
@@ -167,6 +169,11 @@ router.post("/sign", (req: Request, res: Response, next) => {
         fs.writeFileSync(ipaPath, ipaBuffer);
       } catch (downloadErr: unknown) {
         const msg = downloadErr instanceof Error ? downloadErr.message : String(downloadErr);
+        const discordWebhook = process.env.DISCORD_WEBHOOK_URL;
+        await notifyError(discordWebhook, "IPA Download Error", msg, {
+          "URL": ipaUrl.substring(0, 100),
+          "Error Type": downloadErr instanceof Error ? downloadErr.constructor.name : "Unknown",
+        });
         return res.status(400).json({ error: `Failed to download IPA: ${msg}` });
       }
     } else if (ipaFile) {
@@ -276,6 +283,12 @@ router.post("/sign", (req: Request, res: Response, next) => {
       const msg = error instanceof Error ? error.message : String(error);
       console.error("[sign] Unexpected error:", msg);
       await updateSigningJob(jobId, { status: "error", errorMessage: msg }).catch(() => {});
+      const discordWebhook = process.env.DISCORD_WEBHOOK_URL;
+      await notifyError(discordWebhook, "Unexpected Signing Error", msg, {
+        "Job ID": jobId,
+        "IPA Name": ipaOriginalName,
+        "Error Type": error instanceof Error ? error.constructor.name : "Unknown",
+      });
       return res.status(500).json({ jobId, error: "An unexpected error occurred during signing." });
     } finally {
       // Clean up temp files
@@ -287,6 +300,10 @@ router.post("/sign", (req: Request, res: Response, next) => {
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
+    const discordWebhook = process.env.DISCORD_WEBHOOK_URL;
+    await notifyError(discordWebhook, "Request Processing Error", msg, {
+      "Error Type": err instanceof Error ? err.constructor.name : "Unknown",
+    });
     return res.status(400).json({ error: msg || "Request processing failed" });
   }
 });

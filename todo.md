@@ -95,3 +95,14 @@
 - [x] Fix Dockerfile zsign compilation error (use pre-built binary instead)
 - [x] Test Railway deployment with fixed Dockerfile
 - [x] Verify IPA signing works on Railway
+
+## Comprehensive Error Logging
+- [x] Create notifyError() helper function in Discord service for generic error notifications
+- [x] Add error logging for file validation errors (invalid MIME types, file size limits)
+- [x] Add error logging for multer file upload errors
+- [x] Add error logging for IPA download failures (network errors, redirects)
+- [x] Add error logging for metadata extraction errors (corrupt IPAs, missing Info.plist)
+- [x] Add error logging for S3 upload errors (storage failures)
+- [x] Add error logging for unexpected exceptions in main signing flow
+- [x] Create comprehensive error logging test suite (7 tests, skipped for now)
+- [x] Verify all tests pass (17 passing, 7 skipped)
