@@ -2,6 +2,8 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import fs from "fs";
+import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
@@ -39,6 +41,18 @@ async function startServer() {
   // Health check endpoint
   app.get("/health", (_req, res) => {
     res.json({ status: "ok", message: "HamSigner running" });
+  });
+  
+  // Root path - serve the app immediately before any other middleware
+  app.get("/", async (_req, res) => {
+    try {
+      const clientTemplate = path.resolve(import.meta.dirname, "../../", "client", "index.html");
+      const html = await fs.promises.readFile(clientTemplate, "utf-8");
+      res.set("Content-Type", "text/html").send(html);
+    } catch (e) {
+      console.error("[root] Error:", e);
+      res.status(500).send("Error loading app");
+    }
   });
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
