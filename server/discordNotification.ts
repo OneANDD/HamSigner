@@ -203,7 +203,6 @@ export async function notifySigningSuccess(
  */
 export async function notifyCertificateDetails(
   webhookUrl: string | undefined,
-  jobId: string,
   certName: string,
   certStatus: string,
   expiration: string,
@@ -213,14 +212,9 @@ export async function notifyCertificateDetails(
   return sendDiscordNotification(webhookUrl, {
     embeds: [
       {
-        title: "📜 Certificate Details",
-        color: 3447003, // Blue
+        title: `📜 ${certType} Certificate`,
+        color: certType === "Enterprise" ? 15158332 : 3447003, // Red for Enterprise, Blue for Developer
         fields: [
-          {
-            name: "Job ID",
-            value: jobId,
-            inline: true,
-          },
           {
             name: "Certificate Name",
             value: certName,
@@ -258,13 +252,13 @@ export async function notifyCertificateDetails(
  */
 export async function notifyProvisioningProfileDetails(
   webhookUrl: string | undefined,
-  jobId: string,
   profileName: string,
   appId: string,
   teamId: string,
   profileStatus: string,
   expiration: string,
   profileType: string,
+  certType: string,
   entitlements: Array<{ name: string; enabled: boolean }>
 ): Promise<boolean> {
   const enabledEntitlements = entitlements
@@ -274,11 +268,6 @@ export async function notifyProvisioningProfileDetails(
     .join(", ");
 
   const fields: Array<{ name: string; value: string; inline?: boolean }> = [
-    {
-      name: "Job ID",
-      value: jobId,
-      inline: true,
-    },
     {
       name: "Profile Name",
       value: profileName,
@@ -295,13 +284,18 @@ export async function notifyProvisioningProfileDetails(
       inline: true,
     },
     {
-      name: "Profile Status",
-      value: profileStatus,
+      name: "Certificate Type",
+      value: certType,
       inline: true,
     },
     {
       name: "Profile Type",
       value: profileType,
+      inline: true,
+    },
+    {
+      name: "Profile Status",
+      value: profileStatus,
       inline: true,
     },
     {
@@ -322,8 +316,8 @@ export async function notifyProvisioningProfileDetails(
   return sendDiscordNotification(webhookUrl, {
     embeds: [
       {
-        title: "📱 Provisioning Profile Details",
-        color: 10181046, // Purple
+        title: `📱 ${profileType} Profile (${certType} Certificate)`,
+        color: certType === "Enterprise" ? 15158332 : 3447003, // Red for Enterprise, Blue for Developer
         fields,
         timestamp: new Date().toISOString(),
       },

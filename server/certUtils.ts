@@ -108,6 +108,7 @@ export async function checkCertificate(
     }
 
     // Determine certificate type (Developer vs Enterprise)
+    // Note: This will be overridden by provisioning profile type when available
     let type = "Developer";
     if (issuer.toLowerCase().includes("enterprise")) {
       type = "Enterprise";
@@ -289,6 +290,7 @@ export interface ProvisioningProfileInfo {
   isExpired: boolean;
   entitlements: Array<{ name: string; enabled: boolean }>;
   type: string;
+  deviceCount?: number; // Number of provisioned devices (undefined = all devices/enterprise)
 }
 
 /**
@@ -321,6 +323,17 @@ export async function parseProvisioningProfile(
     const teamIdMatch = plistXml.match(/<key>com\.apple\.developer\.team-identifier<\/key>\s*<string>([^<]+)<\/string>/);
     const provisionsAllDevicesMatch = plistXml.match(/<key>ProvisionedDevices<\/key>/);
     
+    // Extract device count
+    let deviceCount: number | undefined = undefined;
+    if (provisionsAllDevicesMatch) {
+      // Count <string> tags within ProvisionedDevices array
+      const devicesMatch = plistXml.match(/<key>ProvisionedDevices<\/key>\s*<array>([\s\S]*?)<\/array>/);
+      if (devicesMatch) {
+        const deviceStrings = devicesMatch[1].match(/<string>/g);
+        deviceCount = deviceStrings ? deviceStrings.length : 0;
+      }
+    }
+    
     const name = nameMatch ? nameMatch[1] : "Unknown";
     const appId = bundleIdMatch ? bundleIdMatch[1] : "Unknown";
     const teamId = teamIdMatch ? teamIdMatch[1] : (appId.split('.')[0] || "Unknown");
@@ -331,15 +344,23 @@ export async function parseProvisioningProfile(
     const daysRemaining = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     const isExpired = daysRemaining < 0;
     
-    // Determine profile type (check ad hoc before distribution to avoid false positives)
+    // Determine profile type based on device restrictions
+    // Enterprise: no ProvisionedDevices (all devices)
+    // Development: has ProvisionedDevices (specific UDIDs)
     let profileType = "Development";
-    if (name.toLowerCase().includes("enterprise")) {
-      profileType = "Enterprise";
-    } else if (name.toLowerCase().includes("ad hoc")) {
-      profileType = "Ad Hoc";
-    } else if (name.toLowerCase().includes("distribution") || name.toLowerCase().includes("appstore")) {
-      profileType = "App Store";
-    } else if (!provisionsAllDevicesMatch) {
+    if (!provisionsAllDevicesMatch) {
+      // No ProvisionedDevices = Enterprise/Ad Hoc (can install on any device)
+      if (name.toLowerCase().includes("enterprise")) {
+        profileType = "Enterprise";
+      } else if (name.toLowerCase().includes("ad hoc")) {
+        profileType = "Ad Hoc";
+      } else if (name.toLowerCase().includes("distribution") || name.toLowerCase().includes("appstore")) {
+        profileType = "App Store";
+      } else {
+        profileType = "Enterprise"; // Default to Enterprise if no device restrictions
+      }
+    } else {
+      // Has ProvisionedDevices = Development (specific UDIDs)
       profileType = "Development";
     }
 
@@ -367,6 +388,7 @@ export async function parseProvisioningProfile(
         isExpired,
         entitlements,
         type: profileType,
+        deviceCount,
       },
     };
   } catch (err: unknown) {

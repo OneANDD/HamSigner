@@ -118,5 +118,9 @@
 - [x] Extract and log entitlements from mobileprovision profile
 - [x] Add Discord webhook logging for all certificate and profile details during signing
 - [x] Add Discord webhook logging for certificate check endpoint (CheckPass page)
+- [x] Fix certificate type detection based on provisioning profile device restrictions
+- [x] Remove Job ID from Discord notifications
+- [x] Add certificate type to provisioning profile Discord logs
+- [x] Extract and count provisioned devices from profiles
 - [x] Test certificate type detection fix
 - [x] Test Discord logging for certificates and profiles

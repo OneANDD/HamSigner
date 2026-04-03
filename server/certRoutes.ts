@@ -146,7 +146,6 @@ router.post(
             if (cert) {
               await notifyCertificateDetails(
                 discordWebhook,
-                checkId,
                 cert.name,
                 cert.isExpired ? "Expired" : "Valid",
                 cert.expires,
@@ -173,15 +172,17 @@ router.post(
           try {
             const profile = provResult.profile;
             if (profile) {
+              // Determine certificate type from profile type
+              const certType = profile.type === "Development" ? "Developer" : profile.type === "Enterprise" ? "Enterprise" : "Distribution";
               await notifyProvisioningProfileDetails(
                 discordWebhook,
-                checkId,
                 profile.name,
                 profile.appId,
                 profile.teamId,
                 profile.status,
                 profile.expires,
                 profile.type,
+                certType,
                 profile.entitlements
               );
             }

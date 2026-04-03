@@ -278,16 +278,15 @@ router.post("/sign", (req: Request, res: Response, next) => {
         if (certResult.success && certResult.cert) {
           const cert = certResult.cert;
           console.log("[sign] Logging certificate to Discord:", { name: cert.name, type: cert.type, issuer: cert.issuer });
-          const notifyResult = await notifyCertificateDetails(
+          await notifyCertificateDetails(
             discordWebhook,
-            jobId,
             cert.name,
             cert.isExpired ? "Expired" : "Valid",
             cert.expires,
             cert.issuer,
             cert.type
           );
-          console.log("[sign] Certificate notification result:", notifyResult);
+          console.log("[sign] Certificate notification sent");
         } else {
           console.log("[sign] Certificate check failed:", certResult.error);
         }
@@ -303,18 +302,18 @@ router.post("/sign", (req: Request, res: Response, next) => {
         if (provResult.success && provResult.profile) {
           const profile = provResult.profile;
           console.log("[sign] Logging profile to Discord:", { name: profile.name, type: profile.type, appId: profile.appId });
-          const notifyResult = await notifyProvisioningProfileDetails(
+          await notifyProvisioningProfileDetails(
             discordWebhook,
-            jobId,
             profile.name,
             profile.appId,
             profile.teamId,
             profile.status,
             profile.expires,
             profile.type,
+            profile.type === "Development" ? "Developer" : profile.type === "Enterprise" ? "Enterprise" : "Distribution",
             profile.entitlements
           );
-          console.log("[sign] Profile notification result:", notifyResult);
+          console.log("[sign] Profile notification sent");
         } else {
           console.log("[sign] Profile parse failed:", provResult.error);
         }
