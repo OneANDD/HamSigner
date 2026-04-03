@@ -1,12 +1,7 @@
 {
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
-  "framework": "other",
-  "functions": {
-    "server/**/*.ts": {
-      "runtime": "nodejs20.x"
-    }
-  },
+  "framework": "vite",
   "env": {
     "NODE_ENV": "production"
   },
