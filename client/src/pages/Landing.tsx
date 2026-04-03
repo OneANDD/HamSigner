@@ -167,6 +167,27 @@ export default function Landing() {
                 </p>
               </div>
             </div>
+
+            {/* Astear17 Card */}
+            <a
+              href="https://astear17.github.io/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-xl border border-border bg-card/50 backdrop-blur-sm p-6 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 block"
+            >
+              <div className="space-y-4">
+                <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-purple-600 to-purple-400 flex items-center justify-center text-white font-bold text-2xl">
+                  A
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Astear17</h3>
+                  <p className="text-sm text-muted-foreground">Main Idea & Startup</p>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Main idea and startup of project. Big thanks to him for the prompts and vision that made this tool possible.
+                </p>
+              </div>
+            </a>
           </div>
         </div>
       </section>

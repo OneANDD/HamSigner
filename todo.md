@@ -58,3 +58,6 @@
 - [x] Move app selection into Sign IPA page as dropdown/selector above file uploads
 - [x] Remove separate Apps page (integrate into Sign IPA form)
 - [x] Update Navigation to remove Apps link
+
+## Credits Section Update
+- [x] Add Astear17 credit card to homepage with GitHub link and description
