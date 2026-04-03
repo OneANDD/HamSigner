@@ -32,6 +32,11 @@ export async function checkCertificate(
     console.log(`[checkCertificate] Converted to binary string, length: ${p12BinaryString.length}`);
     console.log(`[checkCertificate] forge.asn1 available: ${!!forge.asn1}`);
     console.log(`[checkCertificate] forge.asn1.fromDer available: ${typeof forge.asn1.fromDer}`);
+    
+    if (!forge.asn1 || typeof forge.asn1.fromDer !== 'function') {
+      return { success: false, error: "node-forge library not properly initialized" };
+    }
+    
     const p12Asn1 = forge.asn1.fromDer(p12BinaryString);
     console.log(`[checkCertificate] Successfully parsed ASN1`);
 
