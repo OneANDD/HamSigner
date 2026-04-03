@@ -7,12 +7,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libzip-dev \
     libmbedtls-dev \
     curl \
+    tar \
     && rm -rf /var/lib/apt/lists/*
 
-# Download pre-built zsign binary from GitHub releases
-# Using the Linux x86_64 binary
-RUN curl -L https://github.com/zhlynn/zsign/releases/download/v1.1.2/zsign_linux_amd64 -o /usr/local/bin/zsign \
+# Download and extract pre-built zsign binary from GitHub releases
+# Using the Linux x86_64 static binary (v1.0.0)
+RUN curl -L https://github.com/zhlynn/zsign/releases/download/v1.0.0/zsign-linux-x86_64.tar.gz -o /tmp/zsign.tar.gz \
+    && tar -xzf /tmp/zsign.tar.gz -C /tmp \
+    && mv /tmp/zsign /usr/local/bin/zsign \
     && chmod +x /usr/local/bin/zsign \
+    && rm /tmp/zsign.tar.gz \
     && zsign -v
 
 # Set working directory
