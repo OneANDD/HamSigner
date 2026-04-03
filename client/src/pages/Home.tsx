@@ -17,6 +17,7 @@ import {
   Loader2,
   Lock,
   FileCode2,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -494,6 +495,17 @@ export default function Home() {
               ))}
             </div>
           </div>
+
+          {/* Discord card */}
+          <a
+            href="https://discord.gg/W2YDBkBnys"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/10 px-4 py-3 hover:bg-blue-500/15 transition-colors"
+          >
+            <MessageCircle className="w-4 h-4 text-blue-500" />
+            <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Join Discord Community</span>
+          </a>
         </div>
       </main>
     </div>

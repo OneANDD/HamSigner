@@ -137,3 +137,6 @@
 - [x] Add P12 certificate entitlements to Discord notifications
 - [x] Split long entitlements lists into multiple Discord fields
 - [x] Update certificate logging calls to pass entitlements parameter
+
+## UI Enhancements
+- [x] Add Discord server link card to homepage footer
