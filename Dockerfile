@@ -1,7 +1,8 @@
 FROM node:22-slim
 
-# Install runtime dependencies (no build tools needed since we're using pre-built zsign)
+# Install runtime dependencies including CA certificates for HTTPS
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     libssl-dev \
     libzip-dev \
     libmbedtls-dev \
