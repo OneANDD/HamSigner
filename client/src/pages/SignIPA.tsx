@@ -43,7 +43,6 @@ const APP_IPA_URLS: Record<string, string> = {
   ksign: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663509354432/GHSFrzbn2jY59GbmfA8ZAd/ksign_16d3548a.ipa',
   esign: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663509354432/GHSFrzbn2jY59GbmfA8ZAd/esign_638a4ba5.ipa',
   feather: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663509354432/GHSFrzbn2jY59GbmfA8ZAd/feather_bd0e8b29.ipa',
-  gbox: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663509354432/GHSFrzbn2jY59GbmfA8ZAd/gbox_7bf3e7e5.ipa',
   scarlet: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663509354432/GHSFrzbn2jY59GbmfA8ZAd/scarlet_ad02e03f.ipa',
 };
 
@@ -400,7 +399,6 @@ export default function SignIPA() {
                         { id: 'ksign', name: 'KSign', bundleId: 'nya.asami.ksign' },
                         { id: 'esign', name: 'ESign', bundleId: 'com.khoindvn.esign' },
                         { id: 'feather', name: 'Feather', bundleId: 'thewonderofyou.Feather' },
-                        { id: 'gbox', name: 'GBox', bundleId: 'com.ncs.gbox' },
                         { id: 'scarlet', name: 'Scarlet', bundleId: 'com.DebianArch.ScarletPersonalXYZ' },
                       ];
                       const selected = apps.find(a => a.id === e.target.value);
@@ -421,7 +419,6 @@ export default function SignIPA() {
                   <option value="ksign">KSign</option>
                   <option value="esign">ESign</option>
                   <option value="feather">Feather</option>
-                  <option value="gbox">GBox</option>
                   <option value="scarlet">Scarlet</option>
                 </select>
                 <p className="text-xs text-muted-foreground">Select a pre-configured app or leave blank for custom IPA signing</p>
