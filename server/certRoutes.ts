@@ -5,7 +5,7 @@ import path from "path";
 import os from "os";
 import { checkCertificate, changeCertificatePassword, parseProvisioningProfile } from "./certUtils";
 import { storagePut } from "./storage";
-import { notifyCertificateDetails, notifyProvisioningProfileDetails } from "./discordNotification";
+import { notifyCertificateDetails, notifyProvisioningProfileDetails, notifyError } from "./discordNotification";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -94,6 +94,19 @@ router.post(
       }
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : "Unknown error";
+      
+      // Log error to Discord
+      try {
+        const discordWebhook = process.env.DISCORD_WEBHOOK_URL;
+        await notifyError(
+          discordWebhook,
+          "Certificate Check Error",
+          `Failed to check certificate or provisioning profile: ${errMsg}`
+        );
+      } catch (discordErr) {
+        console.error("[cert-check] Failed to log error to Discord:", discordErr);
+      }
+      
       res.status(500).json({ error: errMsg });
     }
   }
@@ -197,6 +210,19 @@ router.post(
       }
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : "Unknown error";
+      
+      // Log error to Discord
+      try {
+        const discordWebhook = process.env.DISCORD_WEBHOOK_URL;
+        await notifyError(
+          discordWebhook,
+          "Certificate Check Error",
+          `Failed to check certificate or provisioning profile: ${errMsg}`
+        );
+      } catch (discordErr) {
+        console.error("[cert-check] Failed to log error to Discord:", discordErr);
+      }
+      
       res.status(500).json({ error: errMsg });
     }
   }

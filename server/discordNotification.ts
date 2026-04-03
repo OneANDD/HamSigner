@@ -261,11 +261,11 @@ export async function notifyProvisioningProfileDetails(
   certType: string,
   entitlements: Array<{ name: string; enabled: boolean }>
 ): Promise<boolean> {
-  const enabledEntitlements = entitlements
+  const enabledEntitlementsList = entitlements
     .filter((e) => e.enabled)
-    .map((e) => e.name)
-    .slice(0, 10)
-    .join(", ");
+    .map((e) => e.name);
+  
+  const enabledEntitlements = enabledEntitlementsList.join(", ");
 
   const fields: Array<{ name: string; value: string; inline?: boolean }> = [
     {
@@ -306,10 +306,28 @@ export async function notifyProvisioningProfileDetails(
   ];
 
   if (enabledEntitlements) {
-    fields.push({
-      name: "Enabled Entitlements",
-      value: enabledEntitlements + (entitlements.filter((e) => e.enabled).length > 10 ? "..." : ""),
-      inline: false,
+    // Split entitlements into chunks if too long for Discord field limit (1024 chars)
+    const entitlementChunks = [];
+    let currentChunk = "";
+    
+    for (const entitlement of enabledEntitlementsList) {
+      const testChunk = currentChunk ? currentChunk + ", " + entitlement : entitlement;
+      if (testChunk.length > 1000) {
+        if (currentChunk) entitlementChunks.push(currentChunk);
+        currentChunk = entitlement;
+      } else {
+        currentChunk = testChunk;
+      }
+    }
+    if (currentChunk) entitlementChunks.push(currentChunk);
+    
+    // Add entitlements as separate fields
+    entitlementChunks.forEach((chunk, index) => {
+      fields.push({
+        name: index === 0 ? "Enabled Entitlements" : "Enabled Entitlements (cont.)",
+        value: chunk,
+        inline: false,
+      });
     });
   }
 

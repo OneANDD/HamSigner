@@ -124,3 +124,9 @@
 - [x] Extract and count provisioned devices from profiles
 - [x] Test certificate type detection fix
 - [x] Test Discord logging for certificates and profiles
+
+## Bug Fixes - Discord Logging & Entitlements
+- [x] Add error logging to certificate checking endpoint (CheckPass page)
+- [x] Fix entitlements logging to include ALL enabled entitlements (not just first 10)
+- [x] Split long entitlements lists into multiple Discord fields to avoid 1024 char limit
+- [x] Add debug logging for device detection to troubleshoot "Provisions all profiles" issue

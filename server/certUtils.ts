@@ -331,7 +331,10 @@ export async function parseProvisioningProfile(
       if (devicesMatch) {
         const deviceStrings = devicesMatch[1].match(/<string>/g);
         deviceCount = deviceStrings ? deviceStrings.length : 0;
+        console.log("[parseProvisioningProfile] Found ProvisionedDevices with", deviceCount, "devices");
       }
+    } else {
+      console.log("[parseProvisioningProfile] No ProvisionedDevices found - Enterprise profile");
     }
     
     const name = nameMatch ? nameMatch[1] : "Unknown";
