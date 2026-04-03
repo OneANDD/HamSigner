@@ -320,7 +320,7 @@ export default function Home() {
               <ShieldCheck className="w-4.5 h-4.5 text-primary" />
             </div>
             <div>
-              <span className="font-semibold text-foreground tracking-tight">IPA Signer</span>
+              <span className="font-semibold text-foreground tracking-tight">HamSigner</span>
               <span className="ml-2 text-xs text-muted-foreground hidden sm:inline">Online iOS App Signing Tool</span>
             </div>
           </div>

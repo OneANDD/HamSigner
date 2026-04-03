@@ -147,7 +147,7 @@ export default function Landing() {
                   <p className="text-sm text-muted-foreground">Product Vision & Design</p>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Conceptualized and designed the IPA Signer platform, defining the user experience and feature set for iOS developers.
+                  Conceptualized and designed the HamSigner platform, defining the user experience and feature set for iOS developers.
                 </p>
               </div>
             </div>

@@ -18,7 +18,7 @@ export function Navigation() {
             <ShieldCheck className="w-4.5 h-4.5 text-primary" />
           </div>
           <span className="font-semibold text-foreground tracking-tight hidden sm:inline">
-            IPA Signer
+            HamSigner
           </span>
         </Link>
 
