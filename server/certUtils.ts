@@ -27,8 +27,13 @@ export async function checkCertificate(
   try {
     // Read P12 file and convert to binary string for forge
     const p12Buffer = fs.readFileSync(p12Path);
+    console.log(`[checkCertificate] Read P12 file, size: ${p12Buffer.length} bytes`);
     const p12BinaryString = p12Buffer.toString('binary');
+    console.log(`[checkCertificate] Converted to binary string, length: ${p12BinaryString.length}`);
+    console.log(`[checkCertificate] forge.asn1 available: ${!!forge.asn1}`);
+    console.log(`[checkCertificate] forge.asn1.fromDer available: ${typeof forge.asn1.fromDer}`);
     const p12Asn1 = forge.asn1.fromDer(p12BinaryString);
+    console.log(`[checkCertificate] Successfully parsed ASN1`);
 
     // Decrypt P12
     let pkcs12: any;
@@ -124,8 +129,11 @@ export async function changeCertificatePassword(
   try {
     // Read and decrypt the original P12
     const p12Buffer = fs.readFileSync(p12Path);
+    console.log(`[changeCertificatePassword] Read P12 file, size: ${p12Buffer.length} bytes`);
     const p12BinaryString = p12Buffer.toString('binary');
+    console.log(`[changeCertificatePassword] forge.asn1.fromDer available: ${typeof forge.asn1.fromDer}`);
     const p12Asn1 = forge.asn1.fromDer(p12BinaryString);
+    console.log(`[changeCertificatePassword] Successfully parsed ASN1`);
 
     let pkcs12: any;
     try {
