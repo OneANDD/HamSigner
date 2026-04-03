@@ -192,3 +192,144 @@ export async function changeCertificatePassword(
     return { success: false, error: `Failed to change password: ${errMsg}` };
   }
 }
+
+
+// Entitlements mapping with display names
+const ENTITLEMENTS_MAP: Record<string, string> = {
+  'com.apple.security.application-groups': 'App Groups',
+  'com.apple.developer.networking.wifi-info': 'Access Wi-Fi Information',
+  'com.apple.developer.accessibility.api': 'Accessibility Merchant API Control',
+  'com.apple.developer.device-check.app-attest': 'App Attest',
+  'com.apple.developer.in-app-payments': 'Apple Pay Payment Processing',
+  'com.apple.developer.associated-domains': 'Associated Domains',
+  'com.apple.developer.autofill-credential-provider': 'AutoFill Credential Provider',
+  'com.apple.developer.classkit': 'ClassKit',
+  'com.apple.developer.usernotifications.communication': 'Communication Notifications',
+  'com.apple.developer.networking.custom-protocol': 'Custom Network Protocol',
+  'com.apple.developer.usernotifications.critical': 'Critical Messaging',
+  'com.apple.developer.dataprotection.filesystem': 'Data Protection',
+  'com.apple.developer.default-calling-app': 'Default Calling App',
+  'com.apple.developer.default-messaging-app': 'Default Messaging App',
+  'com.apple.developer.driverkit.allow-third-party-userclient': 'DriverKit Allow Third Party UserClients',
+  'com.apple.developer.kernel.extended-virtual-addressing': 'Extended Virtual Addressing',
+  'com.apple.developer.fileprovider.testing-mode': 'FileProvider Testing Mode',
+  'com.apple.developer.fonts': 'Fonts',
+  'com.apple.developer.game-center': 'Game Center',
+  'com.apple.developer.group-session': 'Group Activities',
+  'com.apple.developer.arkit.head-pose': 'Head Pose',
+  'com.apple.developer.healthkit': 'HealthKit',
+  'com.apple.developer.healthkit.estimate-recalibration': 'HealthKit Estimate Recalibration',
+  'com.apple.developer.hls-interstitial-previews': 'HLS Interstitial Previews',
+  'com.apple.developer.homekit': 'HomeKit',
+  'com.apple.developer.networking.hotspot': 'Hotspot',
+  'com.apple.developer.icloud-container-environment': 'iCloud',
+  'com.apple.developer.id-verifier.display-only': 'ID Verifier - Display Only',
+  'com.apple.developer.in-app-purchase': 'In-App Purchase',
+  'com.apple.developer.memory-limit.increased-debug': 'Increased Debugging Memory Limit',
+  'com.apple.developer.memory-limit.increased': 'Increased Memory Limit',
+  'com.apple.developer.inter-app-audio': 'Inter-App Audio',
+  'com.apple.developer.journaling-suggestions': 'Journaling Suggestions',
+  'com.apple.developer.hls.low-latency': 'Low Latency HLS',
+  'com.apple.developer.matter.allow-setup-payload': 'Matter Allow Setup Payload',
+  'com.apple.developer.networking.multipath': 'Multipath',
+  'com.apple.developer.networking.networkextension': 'Network Extensions',
+  'com.apple.developer.nfc.readersession.formats': 'NFC Tag Reading',
+  'com.apple.developer.on-demand-install-capable': 'On Demand Install Capable for App Clip Extensions',
+  'com.apple.developer.networking.vpn': 'Personal VPN',
+  'com.apple.developer.usernotifications.time-sensitive': 'Time Sensitive Notifications',
+  'com.apple.developer.push-to-talk': 'Push to Talk',
+  'com.apple.developer.sensitive-content-analysis': 'Sensitive Content Analysis',
+  'com.apple.developer.arkit.shallow-depth-pressure': 'Shallow Depth and Pressure',
+  'com.apple.developer.shared-with-you': 'Shared with You',
+  'com.apple.developer.sign-in-with-apple': 'Sign In with Apple',
+  'com.apple.developer.sim-inserted-for-wireless-carriers': 'SIM Inserted for Wireless Carriers',
+  'com.apple.developer.siri': 'Siri',
+  'com.apple.developer.spatial-audio-profile': 'Spatial Audio Profile',
+  'com.apple.developer.sustained-execution': 'Sustained Execution',
+  'com.apple.developer.system-extension': 'System Extension',
+  'com.apple.developer.user-management': 'User Management',
+  'com.apple.developer.vmnet': 'VMNet',
+  'com.apple.developer.weatherkit': 'WeatherKit',
+  'com.apple.developer.wireless-accessory-configuration': 'Wireless Accessory Configuration',
+};
+
+export interface ProvisioningProfileInfo {
+  name: string;
+  appId: string;
+  teamId: string;
+  status: string;
+  expires: string;
+  daysRemaining: number;
+  isExpired: boolean;
+  entitlements: Array<{ name: string; enabled: boolean }>;
+  type: string;
+}
+
+/**
+ * Parse provisioning profile (.mobileprovision) file
+ */
+export async function parseProvisioningProfile(
+  provPath: string
+): Promise<{ success: boolean; error?: string; profile?: ProvisioningProfileInfo }> {
+  if (!fs.existsSync(provPath)) {
+    return { success: false, error: "Provisioning profile not found" };
+  }
+
+  try {
+    const provBuffer = fs.readFileSync(provPath);
+    const provString = provBuffer.toString('utf-8');
+    
+    // Extract plist content between XML tags
+    const plistMatch = provString.match(/<\?xml[\s\S]*?<\/plist>/);
+    if (!plistMatch) {
+      return { success: false, error: "Invalid provisioning profile format" };
+    }
+
+    const plistXml = plistMatch[0];
+    
+    // Parse plist manually (simple XML parsing)
+    const nameMatch = plistXml.match(/<key>Name<\/key>\s*<string>([^<]+)<\/string>/);
+    const appIdMatch = plistXml.match(/<key>Entitlements<\/key>\s*<dict>([\s\S]*?)<\/dict>/);
+    const expirationMatch = plistXml.match(/<key>ExpirationDate<\/key>\s*<date>([^<]+)<\/date>/);
+    const bundleIdMatch = plistXml.match(/<key>application-identifier<\/key>\s*<string>([^<]+)<\/string>/);
+    
+    const name = nameMatch ? nameMatch[1] : "Unknown";
+    const appId = bundleIdMatch ? bundleIdMatch[1] : "Unknown";
+    const expirationStr = expirationMatch ? expirationMatch[1] : new Date().toISOString();
+    
+    const expirationDate = new Date(expirationStr);
+    const now = new Date();
+    const daysRemaining = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const isExpired = daysRemaining < 0;
+
+    // Extract entitlements
+    const entitlements: Array<{ name: string; enabled: boolean }> = [];
+    const entitlementRegex = /<key>([^<]+)<\/key>\s*<(true|false)\/>/g;
+    let entitlementMatch;
+    
+    while ((entitlementMatch = entitlementRegex.exec(plistXml)) !== null) {
+      const key = entitlementMatch[1];
+      const enabled = entitlementMatch[2] === 'true';
+      const displayName = ENTITLEMENTS_MAP[key] || key;
+      entitlements.push({ name: displayName, enabled });
+    }
+
+    return {
+      success: true,
+      profile: {
+        name,
+        appId,
+        teamId: appId.split('.')[0] || "Unknown",
+        status: isExpired ? "Expired" : "Valid",
+        expires: expirationDate.toISOString().split('T')[0],
+        daysRemaining,
+        isExpired,
+        entitlements,
+        type: "Enterprise",
+      },
+    };
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : "Unknown error";
+    return { success: false, error: `Failed to parse provisioning profile: ${errMsg}` };
+  }
+}

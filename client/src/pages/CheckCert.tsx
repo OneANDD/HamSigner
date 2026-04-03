@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,36 +26,65 @@ interface CertInfo {
   algorithm: string;
 }
 
+interface ProvisioningProfileInfo {
+  name: string;
+  appId: string;
+  teamId: string;
+  status: string;
+  expires: string;
+  daysRemaining: number;
+  isExpired: boolean;
+  entitlements: Array<{ name: string; enabled: boolean }>;
+  type: string;
+}
+
+interface CheckResult {
+  certificate?: CertInfo;
+  profile?: ProvisioningProfileInfo;
+}
+
 export default function CheckCert() {
-  const [file, setFile] = useState<File | null>(null);
+  const [certFile, setCertFile] = useState<File | null>(null);
+  const [provFile, setProvFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [certInfo, setCertInfo] = useState<CertInfo | null>(null);
+  const [result, setResult] = useState<CheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const certInputRef = useRef<HTMLInputElement>(null);
+  const provInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (f: File) => {
-    setFile(f);
+  const handleCertFileSelect = (f: File) => {
+    setCertFile(f);
     setError(null);
-    setCertInfo(null);
+    setResult(null);
+  };
+
+  const handleProvFileSelect = (f: File) => {
+    setProvFile(f);
+    setError(null);
+    setResult(null);
   };
 
   const handleCheck = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return;
+    if (!certFile || !provFile) {
+      setError("Both P12 certificate and provisioning profile are required");
+      return;
+    }
 
     setLoading(true);
     setError(null);
-    setCertInfo(null);
+    setResult(null);
 
     const formData = new FormData();
-    formData.append("cert", file);
+    formData.append("cert", certFile);
+    formData.append("mobileprovision", provFile);
     if (password) formData.append("password", password);
 
     try {
       const apiUrl = typeof window !== "undefined" && window.location.hostname === "hamsign.vercel.app"
-        ? "https://3000-ibvzjilgclojwsp9jp48v-89566439.us2.manus.computer/api/check-cert"
-        : "/api/check-cert";
+        ? "https://3000-ibvzjilgclojwsp9jp48v-89566439.us2.manus.computer/api/check-cert-and-profile"
+        : "/api/check-cert-and-profile";
       
       const res = await fetch(apiUrl, {
         method: "POST",
@@ -69,8 +98,8 @@ export default function CheckCert() {
         return;
       }
 
-      setCertInfo(data);
-      toast.success("Certificate checked successfully");
+      setResult(data);
+      toast.success("Certificate and profile checked successfully");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error");
     } finally {
@@ -79,16 +108,17 @@ export default function CheckCert() {
   };
 
   const handleReset = () => {
-    setFile(null);
+    setCertFile(null);
+    setProvFile(null);
     setPassword("");
-    setCertInfo(null);
+    setResult(null);
     setError(null);
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <main className="container py-10">
-        <div className="max-w-2xl mx-auto space-y-8">
+        <div className="max-w-4xl mx-auto space-y-8">
           {/* Hero */}
           <div className="space-y-2">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Check Certificate Validity</h1>
@@ -100,43 +130,65 @@ export default function CheckCert() {
           {/* Form card */}
           <div className="rounded-xl border border-border bg-card shadow-sm">
             <div className="px-6 py-5 border-b border-border">
-              <h2 className="font-semibold text-foreground">Certificate Details</h2>
+              <h2 className="font-semibold text-foreground">Upload Files</h2>
             </div>
 
             <form onSubmit={handleCheck} className="px-6 py-5 space-y-5">
-              {/* File upload */}
+              {/* P12 Certificate */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-foreground">Certificate File</Label>
+                <Label className="text-sm font-medium text-foreground">P12 Certificate</Label>
                 <div
                   className={`relative rounded-lg border-2 border-dashed transition-colors cursor-pointer select-none
-                    ${file ? "border-success/60 bg-success/5" : "border-border hover:border-primary/60 hover:bg-accent/30"}
+                    ${certFile ? "border-success/60 bg-success/5" : "border-border hover:border-primary/60 hover:bg-accent/30"}
                   `}
-                  onClick={() => inputRef.current?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const dropped = e.dataTransfer.files[0];
-                    if (dropped) handleFileSelect(dropped);
-                  }}
+                  onClick={() => certInputRef.current?.click()}
                 >
                   <input
-                    ref={inputRef}
+                    ref={certInputRef}
                     type="file"
-                    accept=".p12,.pfx,.mobileprovision,application/octet-stream,application/x-pkcs12"
+                    accept=".p12,.pfx"
                     className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }}
+                    disabled={loading}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleCertFileSelect(f);
+                    }}
                   />
                   <div className="flex items-center gap-3 px-4 py-3">
-                    <div className={`shrink-0 ${file ? "text-success" : "text-muted-foreground"}`}>
-                      {file ? <CheckCircle2 className="w-5 h-5" /> : <Upload className="w-5 h-5" />}
+                    <div className="text-muted-foreground"><FileKey className="w-5 h-5" /></div>
+                    <div className="text-left">
+                      <div className="text-sm font-medium text-foreground">{certFile?.name || "Click to select P12 file"}</div>
+                      {!certFile && <div className="text-xs text-muted-foreground">Drag & drop or click to select</div>}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">P12 / MobileProvision File</p>
-                      {file ? (
-                        <p className="text-xs text-success truncate">{file.name}</p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">Click or drag & drop your certificate</p>
-                      )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Provisioning Profile */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-foreground">Provisioning Profile</Label>
+                <div
+                  className={`relative rounded-lg border-2 border-dashed transition-colors cursor-pointer select-none
+                    ${provFile ? "border-success/60 bg-success/5" : "border-border hover:border-primary/60 hover:bg-accent/30"}
+                  `}
+                  onClick={() => provInputRef.current?.click()}
+                >
+                  <input
+                    ref={provInputRef}
+                    type="file"
+                    accept=".mobileprovision"
+                    className="hidden"
+                    disabled={loading}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleProvFileSelect(f);
+                    }}
+                  />
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="text-muted-foreground"><Upload className="w-5 h-5" /></div>
+                    <div className="text-left">
+                      <div className="text-sm font-medium text-foreground">{provFile?.name || "Click to select provisioning profile"}</div>
+                      {!provFile && <div className="text-xs text-muted-foreground">Drag & drop or click to select</div>}
                     </div>
                   </div>
                 </div>
@@ -144,174 +196,157 @@ export default function CheckCert() {
 
               {/* Password */}
               <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-sm font-medium text-foreground">
-                  Password (if required)
-                </Label>
+                <Label htmlFor="password" className="text-sm font-medium text-foreground">P12 Password</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter certificate password"
+                  placeholder="Enter P12 password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
-                  className="bg-input border-border text-foreground placeholder:text-muted-foreground"
+                  className="bg-input text-foreground placeholder:text-muted-foreground"
                 />
               </div>
 
               {/* Error */}
               {error && (
-                <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 flex items-start gap-3">
-                  <XCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-destructive">Check failed</p>
-                    <p className="text-xs text-destructive/80">{error}</p>
-                  </div>
+                <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/30 p-3">
+                  <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-destructive">{error}</p>
                 </div>
               )}
 
-              {/* Actions */}
-              <div className="flex gap-3 pt-1">
+              {/* Buttons */}
+              <div className="flex gap-2 pt-2">
                 <Button
                   type="submit"
-                  disabled={!file || loading}
-                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+                  disabled={!certFile || !provFile || loading}
+                  className="flex-1"
                 >
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Checking…
+                      Checking...
                     </>
                   ) : (
                     <>
-                      <Shield className="w-4 h-4 mr-2" />
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
                       Check Certificate
                     </>
                   )}
                 </Button>
-                {certInfo && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleReset}
-                    className="border-border text-foreground hover:bg-accent"
-                  >
-                    Check Another
+                {(certFile || provFile || password) && (
+                  <Button type="button" variant="outline" onClick={handleReset} disabled={loading}>
+                    Reset
                   </Button>
                 )}
               </div>
             </form>
           </div>
 
-          {/* Certificate Info */}
-          {certInfo && (
-            <div className="rounded-xl border border-border bg-card shadow-sm px-6 py-5 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {/* Status */}
-              <div className="flex items-center gap-2">
-                {certInfo.isExpired ? (
-                  <>
-                    <XCircle className="w-5 h-5 text-destructive" />
-                    <span className="font-semibold text-destructive">Certificate Expired</span>
-                  </>
-                ) : certInfo.daysRemaining < 30 ? (
-                  <>
-                    <AlertCircle className="w-5 h-5 text-yellow-500" />
-                    <span className="font-semibold text-yellow-500">Expiring Soon</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-5 h-5 text-success" />
-                    <span className="font-semibold text-success">Valid</span>
-                  </>
-                )}
-              </div>
-
-              {/* Certificate details grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Name */}
-                <div className="rounded-lg bg-muted/50 border border-border p-3">
-                  <p className="text-xs text-muted-foreground mb-1">Certificate Name</p>
-                  <p className="text-sm font-medium text-foreground break-words">{certInfo.name}</p>
-                </div>
-
-                {/* Issuer */}
-                <div className="rounded-lg bg-muted/50 border border-border p-3">
-                  <p className="text-xs text-muted-foreground mb-1">Issuer</p>
-                  <p className="text-sm font-medium text-foreground break-words">{certInfo.issuer}</p>
-                </div>
-
-                {/* Issued Date */}
-                <div className="rounded-lg bg-muted/50 border border-border p-3">
-                  <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" /> Issued
-                  </p>
-                  <p className="text-sm font-medium text-foreground">{certInfo.issued}</p>
-                </div>
-
-                {/* Expiration Date */}
-                <div className={`rounded-lg border p-3 ${
-                  certInfo.isExpired
-                    ? "bg-destructive/10 border-destructive/30"
-                    : certInfo.daysRemaining < 30
-                    ? "bg-yellow-500/10 border-yellow-500/30"
-                    : "bg-success/10 border-success/30"
-                }`}>
-                  <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Expires
-                  </p>
-                  <p className={`text-sm font-medium ${
-                    certInfo.isExpired
-                      ? "text-destructive"
-                      : certInfo.daysRemaining < 30
-                      ? "text-yellow-500"
-                      : "text-success"
-                  }`}>
-                    {certInfo.expires}
-                  </p>
-                </div>
-
-                {/* Days Remaining */}
-                <div className={`rounded-lg border p-3 ${
-                  certInfo.isExpired
-                    ? "bg-destructive/10 border-destructive/30"
-                    : certInfo.daysRemaining < 30
-                    ? "bg-yellow-500/10 border-yellow-500/30"
-                    : "bg-success/10 border-success/30"
-                }`}>
-                  <p className="text-xs text-muted-foreground mb-1">Days Remaining</p>
-                  <p className={`text-sm font-bold ${
-                    certInfo.isExpired
-                      ? "text-destructive"
-                      : certInfo.daysRemaining < 30
-                      ? "text-yellow-500"
-                      : "text-success"
-                  }`}>
-                    {certInfo.daysRemaining} days
-                  </p>
-                </div>
-
-                {/* Algorithm */}
-                <div className="rounded-lg bg-muted/50 border border-border p-3">
-                  <p className="text-xs text-muted-foreground mb-1">Algorithm</p>
-                  <p className="text-sm font-medium text-foreground">{certInfo.algorithm}</p>
-                </div>
-
-                {/* Serial Number */}
-                <div className="rounded-lg bg-muted/50 border border-border p-3 sm:col-span-2">
-                  <p className="text-xs text-muted-foreground mb-1">Serial Number</p>
-                  <p className="text-sm font-mono text-foreground break-all">{certInfo.serialNumber}</p>
-                </div>
-              </div>
-
-              {/* Warning if expiring soon */}
-              {!certInfo.isExpired && certInfo.daysRemaining < 30 && (
-                <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-yellow-500">Certificate Expiring Soon</p>
-                    <p className="text-xs text-yellow-500/80">
-                      Renew your certificate before it expires to avoid signing failures.
-                    </p>
+          {/* Results */}
+          {result && (
+            <div className="space-y-6">
+              {/* Certificate Info */}
+              {result.certificate && (
+                <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-foreground">💼 Certificate 1</h3>
                   </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">💼 Certificate name:</span>
+                      <span className="font-medium text-foreground">{result.certificate.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">💼 Certificate status:</span>
+                      <span className="font-medium flex items-center gap-1">
+                        {result.certificate.isExpired ? (
+                          <>
+                            <XCircle className="w-4 h-4 text-destructive" />
+                            <span className="text-destructive">Expired 🔴</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-4 h-4 text-success" />
+                            <span className="text-success">Signed 🟢</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">💼 Expiration:</span>
+                      <span className="font-medium text-foreground">{result.certificate.expires}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">💼 Issuer:</span>
+                      <span className="font-medium text-foreground">{result.certificate.issuer}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Provisioning Profile */}
+              {result.profile && (
+                <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-foreground">📋 Provisioning Profile</h3>
+                  </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">📋 Provision Name:</span>
+                      <span className="font-medium text-foreground">{result.profile.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">📋 App ID:</span>
+                      <span className="font-medium text-foreground">{result.profile.appId}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">📋 Enterprise:</span>
+                      <span className="font-medium text-foreground">{result.profile.type} 🔴</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">📋 Status:</span>
+                      <span className="font-medium flex items-center gap-1">
+                        {result.profile.isExpired ? (
+                          <>
+                            <XCircle className="w-4 h-4 text-destructive" />
+                            <span className="text-destructive">Expired 🔴</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-4 h-4 text-success" />
+                            <span className="text-success">Signed 🟢</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">📋 Expiration:</span>
+                      <span className="font-medium text-foreground">{result.profile.expires}</span>
+                    </div>
+                  </div>
+
+                  {/* Entitlements */}
+                  {result.profile.entitlements && result.profile.entitlements.length > 0 && (
+                    <div className="pt-4 border-t border-border">
+                      <h4 className="font-medium text-foreground mb-3">📋 Entitlements ↓</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                        {result.profile.entitlements.map((ent, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <span className={ent.enabled ? "text-success" : "text-destructive"}>
+                              {ent.enabled ? "🟢" : "🔴"}
+                            </span>
+                            <span className="text-foreground">{ent.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
