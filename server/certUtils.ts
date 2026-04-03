@@ -43,14 +43,28 @@ export async function checkCertificate(
     const p12Asn1 = forge.asn1.fromDer(p12BinaryString);
     console.log(`[checkCertificate] Successfully parsed ASN1`);
 
-    // Decrypt P12
+    // Decrypt P12 - try empty password first, then user password
     let pkcs12: any;
-    try {
-      pkcs12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, password || "");
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      if (errMsg.toLowerCase().includes("password") || errMsg.toLowerCase().includes("decrypt")) {
-        return { success: false, error: "Incorrect P12 password" };
+    const passwordsToTry = [""];
+    if (password) {
+      passwordsToTry.push(password);
+    }
+    
+    let lastError: string | null = null;
+    for (const pwd of passwordsToTry) {
+      try {
+        pkcs12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, pwd);
+        break; // Success, exit loop
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        lastError = errMsg;
+        // Continue to next password attempt
+      }
+    }
+    
+    if (!pkcs12) {
+      if (lastError?.toLowerCase().includes("password") || lastError?.toLowerCase().includes("decrypt")) {
+        return { success: false, error: password ? "Incorrect P12 password" : "P12 file is password-protected. Please enter the password." };
       }
       return { success: false, error: "Failed to read P12 file" };
     }
