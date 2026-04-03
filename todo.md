@@ -83,3 +83,10 @@
 - [x] Create docker-compose.yml for local testing
 - [x] Create .dockerignore file
 - [x] Create DOCKER_DEPLOYMENT.md with deployment instructions
+
+
+## Bug Fixes - Certificate Operations
+- [x] Fix node-forge fromDer undefined error in certificate checking
+- [x] Fix node-forge certificate parsing for P12 files
+- [x] Test Check Pass feature
+- [x] Test Change Pass feature
