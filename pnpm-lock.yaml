@@ -124,6 +124,9 @@ importers:
       axios:
         specifier: ^1.12.0
         version: 1.12.2
+      bplist-parser:
+        specifier: ^0.3.2
+        version: 0.3.2
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2458,12 +2461,20 @@ packages:
     resolution: {integrity: sha512-vAPMQdnyKCBtkmQA6FMCBvU9qFIppS3nzyXnEM+Lo2IAhG4Mpjv9cCxMudhgV3YdNNJv6TNqXy97dfRVL2LmaQ==}
     hasBin: true
 
+  big-integer@1.6.52:
+    resolution: {integrity: sha512-QxD8cf2eVqJOOz63z6JIN9BzvVs/dlySa5HGSBH5xtR8dPteIRQnBxxKqkNTiT6jbDTF6jAfrd4oMcND9RGbQg==}
+    engines: {node: '>=0.6'}
+
   body-parser@1.20.3:
     resolution: {integrity: sha512-7rAxByjUMqQ3/bHJy7D6OGXvx/MMc4IqBn/X0fcM1QUcAItpZrBEYhWGem+tzXH90c+G01ypMcYJBO9Y30203g==}
     engines: {node: '>= 0.8', npm: 1.2.8000 || >= 1.4.16}
 
   bowser@2.12.1:
     resolution: {integrity: sha512-z4rE2Gxh7tvshQ4hluIT7XcFrgLIQaw9X3A+kTTRdovCz5PMukm/0QC/BKSYPj3omF5Qfypn9O/c5kgpmvYUCw==}
+
+  bplist-parser@0.3.2:
+    resolution: {integrity: sha512-apC2+fspHGI3mMKj+dGevkGo/tCqVB8jMb6i+OX+E29p0Iposz07fABkRIfVUPNd5A5VbuOz1bZbnmkKLYF+wQ==}
+    engines: {node: '>= 5.10.0'}
 
   browserslist@4.26.3:
     resolution: {integrity: sha512-lAUU+02RFBuCKQPj/P6NgjlbCnLBMp4UtgTx7vNHd3XSIJF87s9a5rA3aH2yw3GS9DqZAUbOtZdCCiZeVRqt0w==}
@@ -6910,6 +6921,8 @@ snapshots:
 
   baseline-browser-mapping@2.8.12: {}
 
+  big-integer@1.6.52: {}
+
   body-parser@1.20.3:
     dependencies:
       bytes: 3.1.2
@@ -6928,6 +6941,10 @@ snapshots:
       - supports-color
 
   bowser@2.12.1: {}
+
+  bplist-parser@0.3.2:
+    dependencies:
+      big-integer: 1.6.52
 
   browserslist@4.26.3:
     dependencies:

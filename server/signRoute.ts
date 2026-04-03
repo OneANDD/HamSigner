@@ -123,7 +123,8 @@ router.post("/sign", (req: Request, res: Response) => {
         ipaPath,
         p12File.path,
         password,
-        provFile.path
+        provFile.path,
+        outputPath
       );
 
       if (!signingResult.success) {
@@ -135,10 +136,14 @@ router.post("/sign", (req: Request, res: Response) => {
       }
 
       // ---- Extract metadata ----
+      console.log(`[sign] Extracting metadata from: ${outputPath}`);
+      console.log(`[sign] File exists: ${fs.existsSync(outputPath)}`);
       const meta = await extractIpaMetadata(outputPath);
+      console.log(`[sign] Extracted metadata:`, meta);
       const appName = appNameOverride || (meta.appName as string) || ipaOriginalName.replace(/\.ipa$/i, "");
       const bundleId = bundleIdOverride || (meta.bundleId as string) || "com.unknown.app";
       const appVersion = (meta.appVersion as string) || "1.0";
+      console.log(`[sign] Final metadata:`, { appName, bundleId, appVersion });
 
       // ---- Upload signed IPA to S3 ----
       const ipaKey = `signed/${jobId}/${signedIpaName}`;

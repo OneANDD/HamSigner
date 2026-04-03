@@ -3,6 +3,12 @@ import { promisify } from "util";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+// @ts-ignore
+import plistModule from "plist";
+// @ts-ignore
+import * as bplistParser from "bplist-parser";
+
+const plistParser = plistModule as any;
 
 const execFileAsync = promisify(execFileCallback);
 
@@ -14,7 +20,8 @@ export async function signIpa(
   ipaPath: string,
   p12Path: string,
   p12Password: string,
-  provisioningProfilePath: string
+  provisioningProfilePath: string,
+  outputPath?: string
 ): Promise<{ success: boolean; error?: string; metadata?: Record<string, unknown> }> {
   try {
     for (const [label, p] of [["IPA", ipaPath], ["P12", p12Path], ["MobileProvision", provisioningProfilePath]] as const) {
@@ -23,16 +30,38 @@ export async function signIpa(
       }
     }
 
-    const outputPath = ipaPath.replace(/\.ipa$/, "-signed.ipa");
+    // Use provided outputPath or generate default
+    const finalOutputPath = outputPath || ipaPath.replace(/\.ipa$/, "-signed.ipa");
 
     // Invoke zsign with the certificate password
-    await execFileAsync("zsign", ["-k", p12Path, "-p", p12Password, "-m", provisioningProfilePath, "-o", outputPath, ipaPath], {
-      timeout: 300_000, // 5 minutes max
-      maxBuffer: 10 * 1024 * 1024,
-    });
+    console.log(`[signIpa] Starting zsign with outputPath=${finalOutputPath}`);
+    try {
+      await execFileAsync("zsign", ["-k", p12Path, "-p", p12Password, "-m", provisioningProfilePath, "-o", finalOutputPath, ipaPath], {
+        timeout: 300_000, // 5 minutes max
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      console.log(`[signIpa] zsign completed successfully`);
+    } catch (zsignErr: unknown) {
+      const zsignError = zsignErr as NodeJS.ErrnoException & { stderr?: string; stdout?: string };
+      console.error(`[signIpa] zsign failed:`, {
+        message: zsignError?.message,
+        code: zsignError?.code,
+        stderr: zsignError?.stderr,
+        stdout: zsignError?.stdout,
+      });
+      throw zsignErr;
+    }
+
+    // Verify output file exists
+    if (!fs.existsSync(finalOutputPath)) {
+      console.error(`[signIpa] Output file not created: ${finalOutputPath}`);
+      return { success: false, error: `Signing completed but output file was not created. This usually means zsign is not installed or failed silently.` };
+    }
+
+    console.log(`[signIpa] Output file verified at ${finalOutputPath}`);
 
     // Extract metadata from the signed IPA
-    const metadata = await extractIpaMetadata(outputPath);
+    const metadata = await extractIpaMetadata(finalOutputPath);
 
     return { success: true, metadata };
   } catch (err: unknown) {
@@ -65,9 +94,13 @@ export async function extractIpaMetadata(ipaPath: string): Promise<Record<string
 
       // Find the Info.plist path (Payload/AppName.app/Info.plist)
       const plistMatch = listing.match(/Payload\/[^/]+\.app\/Info\.plist/);
-      if (!plistMatch) return {};
+      if (!plistMatch) {
+        console.log(`[extractIpaMetadata] No Info.plist found in IPA`);
+        return {};
+      }
 
       const plistEntry = plistMatch[0];
+      console.log(`[extractIpaMetadata] Found plist at: ${plistEntry}`);
 
       // Extract Info.plist from the IPA
       await execFileAsync("unzip", ["-o", "-j", ipaPath, plistEntry, "-d", tmpDir], {
@@ -75,14 +108,55 @@ export async function extractIpaMetadata(ipaPath: string): Promise<Record<string
       });
 
       const plistPath = path.join(tmpDir, "Info.plist");
-      if (!fs.existsSync(plistPath)) return {};
+      if (!fs.existsSync(plistPath)) {
+        console.log(`[extractIpaMetadata] Extracted plist not found at ${plistPath}`);
+        return {};
+      }
 
-      const content = fs.readFileSync(plistPath, "utf8");
+      // Read the plist file
+      const buffer = fs.readFileSync(plistPath);
+
+      // Check if it's a binary plist (starts with bplist00)
+      const isBinaryPlist = buffer.slice(0, 8).toString('ascii') === 'bplist00';
+      console.log(`[extractIpaMetadata] Plist is binary: ${isBinaryPlist}`);
+
+      let parsedPlist: Record<string, unknown> = {};
+
+      if (isBinaryPlist) {
+        // Parse binary plist
+        try {
+          const parsed = (bplistParser as any).parseBuffer(buffer);
+          parsedPlist = parsed[0] as Record<string, unknown>;
+          console.log(`[extractIpaMetadata] Successfully parsed binary plist with ${Object.keys(parsedPlist).length} keys`);
+          console.log(`[extractIpaMetadata] Binary plist keys:`, Object.keys(parsedPlist).slice(0, 20));
+        } catch (bpErr) {
+          console.error(`[extractIpaMetadata] Failed to parse binary plist:`, bpErr);
+        }
+      } else {
+        // Parse XML plist
+        try {
+          const content = buffer.toString("utf8");
+          parsedPlist = plistParser.parse(content);
+          console.log(`[extractIpaMetadata] Successfully parsed XML plist with ${Object.keys(parsedPlist).length} keys`);
+        } catch (xmlErr) {
+          console.error(`[extractIpaMetadata] Failed to parse XML plist:`, xmlErr);
+        }
+      }
+
+      console.log(`[extractIpaMetadata] Parsed plist keys:`, Object.keys(parsedPlist).slice(0, 20));
+
+      // Extract values from parsed plist
+      const appName = (parsedPlist.CFBundleDisplayName as string) || (parsedPlist.CFBundleName as string) || "Unknown App";
+      const bundleId = (parsedPlist.CFBundleIdentifier as string) || "com.unknown.app";
+      const appVersion = (parsedPlist.CFBundleShortVersionString as string) || (parsedPlist.CFBundleVersion as string) || "1.0";
+
+      console.log(`[extractIpaMetadata] Extracted metadata:`, { appName, bundleId, appVersion });
+      console.log(`[extractIpaMetadata] Full parsed plist keys:`, Object.keys(parsedPlist).slice(0, 20));
 
       return {
-        appName: extractPlistValue(content, "CFBundleDisplayName") || extractPlistValue(content, "CFBundleName") || "Unknown App",
-        bundleId: extractPlistValue(content, "CFBundleIdentifier") || "com.unknown.app",
-        appVersion: extractPlistValue(content, "CFBundleShortVersionString") || extractPlistValue(content, "CFBundleVersion") || "1.0",
+        appName,
+        bundleId,
+        appVersion,
       };
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -91,12 +165,6 @@ export async function extractIpaMetadata(ipaPath: string): Promise<Record<string
     console.error("[extractIpaMetadata] Error:", err);
     return {};
   }
-}
-
-function extractPlistValue(plist: string, key: string): string | undefined {
-  const regex = new RegExp(`<key>${key}</key>\\s*<string>([^<]+)</string>`);
-  const match = plist.match(regex);
-  return match ? match[1] : undefined;
 }
 
 /**
