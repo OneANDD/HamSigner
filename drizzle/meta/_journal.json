@@ -15,6 +15,13 @@
       "when": 1775184799094,
       "tag": "0001_zippy_iron_lad",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1775234605805,
+      "tag": "0002_rainy_blue_shield",
+      "breakpoints": true
     }
   ]
 }

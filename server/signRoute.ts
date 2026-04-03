@@ -161,6 +161,10 @@ router.post("/sign", (req: Request, res: Response) => {
       );
 
       // ---- Update job as done ----
+      // Set expiration to 7 days from now
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      
       await updateSigningJob(jobId, {
         status: "done",
         signedIpaUrl,
@@ -168,6 +172,7 @@ router.post("/sign", (req: Request, res: Response) => {
         appName,
         bundleId,
         appVersion,
+        expiresAt,
       });
 
       return res.json({

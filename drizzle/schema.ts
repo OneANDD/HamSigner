@@ -27,6 +27,8 @@ export const signingJobs = mysqlTable("signing_jobs", {
   bundleId: varchar("bundleId", { length: 255 }),
   appVersion: varchar("appVersion", { length: 64 }),
   errorMessage: text("errorMessage"),
+  expiresAt: timestamp("expiresAt"), // Files expire 7 days after signing
+  isDeleted: int("isDeleted").default(0).notNull(), // Soft delete flag
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

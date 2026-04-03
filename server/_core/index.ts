@@ -11,6 +11,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import signRoute from "../signRoute";
 import certRoutes from "../certRoutes";
+import { startCleanupSchedule } from "../cleanupService";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -102,6 +103,9 @@ async function startServer() {
   // Always use Vite for serving frontend (development and production)
   // This ensures files are served dynamically without build issues
   await setupVite(app, server);
+
+  // Start the cleanup schedule for expired files
+  startCleanupSchedule();
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
