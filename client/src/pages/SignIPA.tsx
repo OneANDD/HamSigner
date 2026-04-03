@@ -343,8 +343,8 @@ export default function SignIPA() {
                       const apps = [
                         { id: 'ksign', name: 'KSign', bundleId: 'nya.asami.ksign' },
                         { id: 'esign', name: 'ESign', bundleId: 'com.khoindvn.esign' },
-                        { id: 'feather', name: 'Feather', bundleId: 'me.xfsnow.feather' },
-                        { id: 'scarlet', name: 'Scarlet', bundleId: 'com.foxfort.scarlet' },
+                        { id: 'feather', name: 'Feather', bundleId: 'thewonderofyou.Feather' },
+                        { id: 'scarlet', name: 'Scarlet', bundleId: 'com.DebianArch.ScarletPersonalXYZ' },
                       ];
                       const app = apps.find(a => a.id === e.target.value);
                       if (app) {

@@ -106,3 +106,7 @@
 - [x] Add error logging for unexpected exceptions in main signing flow
 - [x] Create comprehensive error logging test suite (7 tests, skipped for now)
 - [x] Verify all tests pass (17 passing, 7 skipped)
+
+## Bug Fixes - Bundle IDs
+- [x] Fix Feather bundle ID: changed from me.xfsnow.feather to thewonderofyou.Feather
+- [x] Fix Scarlet bundle ID: changed from com.foxfort.scarlet to com.DebianArch.ScarletPersonalXYZ
