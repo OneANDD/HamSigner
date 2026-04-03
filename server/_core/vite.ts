@@ -48,20 +48,76 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "../", "dist", "public");
-  console.log(`[serveStatic] Serving from: ${distPath}`);
-  console.log(`[serveStatic] Path exists: ${fs.existsSync(distPath)}`);
+  // Try multiple possible dist paths
+  const possiblePaths = [
+    path.resolve(import.meta.dirname, "../", "dist", "public"),
+    path.resolve(import.meta.dirname, "../", "dist"),
+    path.resolve(import.meta.dirname, "../../", "dist", "public"),
+    path.resolve(import.meta.dirname, "../../", "dist"),
+  ];
+
+  let distPath: string | null = null;
   
-  if (!fs.existsSync(distPath)) {
-    console.error(`Could not find: ${distPath}`);
+  console.log("[serveStatic] Searching for dist directory...");
+  for (const p of possiblePaths) {
+    console.log(`[serveStatic] Checking: ${p}`);
+    if (fs.existsSync(p)) {
+      console.log(`[serveStatic] Found dist at: ${p}`);
+      distPath = p;
+      break;
+    }
   }
 
-  app.use(express.static(distPath));
+  if (!distPath) {
+    console.error("[serveStatic] Could not find dist directory in any of these locations:");
+    possiblePaths.forEach(p => console.error(`  - ${p}`));
+    console.error("[serveStatic] Falling back to serving error page");
+    
+    app.use("*", (_req, res) => {
+      res.status(500).send(`
+        <html>
+          <body style="font-family: Arial; padding: 20px;">
+            <h1>Build Error</h1>
+            <p>The application build files could not be found. Please check the deployment logs.</p>
+            <p>Expected dist directory at one of these locations:</p>
+            <ul>
+              ${possiblePaths.map(p => `<li>${p}</li>`).join("")}
+            </ul>
+          </body>
+        </html>
+      `);
+    });
+    return;
+  }
 
-  // fall through to index.html if the file doesn't exist
+  // Check if index.html exists
+  const indexPath = path.resolve(distPath, "index.html");
+  if (!fs.existsSync(indexPath)) {
+    console.error(`[serveStatic] index.html not found at: ${indexPath}`);
+    console.error(`[serveStatic] Contents of ${distPath}:`);
+    try {
+      const contents = fs.readdirSync(distPath);
+      contents.forEach(f => console.error(`  - ${f}`));
+    } catch (e) {
+      console.error(`[serveStatic] Could not read directory: ${e}`);
+    }
+  }
+
+  // Serve static files
+  console.log(`[serveStatic] Serving static files from: ${distPath}`);
+  app.use(express.static(distPath, { 
+    maxAge: "1h",
+    etag: false 
+  }));
+
+  // Fallback to index.html for all other routes (SPA routing)
   app.use("*", (_req, res) => {
-    const indexPath = path.resolve(distPath, "index.html");
-    console.log(`[serveStatic] Serving index.html from: ${indexPath}`);
-    res.sendFile(indexPath);
+    console.log(`[serveStatic] Serving index.html for route: ${_req.path}`);
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error(`[serveStatic] Error sending index.html: ${err.message}`);
+        res.status(500).send("Error loading application");
+      }
+    });
   });
 }
