@@ -1,17 +1,7 @@
 import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -25,4 +15,21 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+export const signingJobs = mysqlTable("signing_jobs", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  status: mysqlEnum("status", ["pending", "uploading", "signing", "done", "error"])
+    .default("pending")
+    .notNull(),
+  originalIpaName: varchar("originalIpaName", { length: 255 }),
+  signedIpaUrl: text("signedIpaUrl"),
+  manifestUrl: text("manifestUrl"),
+  appName: varchar("appName", { length: 255 }),
+  bundleId: varchar("bundleId", { length: 255 }),
+  appVersion: varchar("appVersion", { length: 64 }),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SigningJob = typeof signingJobs.$inferSelect;
+export type InsertSigningJob = typeof signingJobs.$inferInsert;
