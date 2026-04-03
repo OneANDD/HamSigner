@@ -1,7 +1,6 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import { type Server } from "http";
-import { nanoid } from "nanoid";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
@@ -23,33 +22,26 @@ export async function setupVite(app: Express, server: Server) {
   // Use Vite's middleware for handling assets and HMR
   app.use(vite.middlewares);
 
-  // Fallback: serve index.html for all routes (SPA routing)
-  app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
+  // Serve index.html for all non-API routes
+  app.get("*", async (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith("/api") || req.path.startsWith("/__manus__")) {
+      return next();
+    }
 
     try {
-      // Get the index.html path from Vite config root
       const clientRoot = path.resolve(import.meta.dirname, "../../", "client");
       const clientTemplate = path.resolve(clientRoot, "index.html");
 
-      console.log(`[setupVite] Serving for URL: ${url}`);
-      console.log(`[setupVite] Template path: ${clientTemplate}`);
-      console.log(`[setupVite] Template exists: ${fs.existsSync(clientTemplate)}`);
+      console.log(`[setupVite] GET ${req.path} -> serving index.html`);
 
-      // Always reload the index.html file from disk in case it changes
+      // Read and transform the template
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`
-      );
-      
-      // Transform the template through Vite
-      const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      const page = await vite.transformIndexHtml(req.originalUrl, template);
+      res.set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
-      console.error(`[setupVite] Error serving page:`, e);
-      vite.ssrFixStacktrace(e as Error);
-      next(e);
+      console.error(`[setupVite] Error serving page for ${req.path}:`, e);
+      res.status(500).send("Error loading application");
     }
   });
 }
@@ -59,72 +51,32 @@ export function serveStatic(app: Express) {
   const possiblePaths = [
     path.resolve(import.meta.dirname, "../", "dist", "public"),
     path.resolve(import.meta.dirname, "../", "dist"),
-    path.resolve(import.meta.dirname, "../../", "dist", "public"),
-    path.resolve(import.meta.dirname, "../../", "dist"),
   ];
 
   let distPath: string | null = null;
   
-  console.log("[serveStatic] Searching for dist directory...");
   for (const p of possiblePaths) {
-    console.log(`[serveStatic] Checking: ${p}`);
     if (fs.existsSync(p)) {
-      console.log(`[serveStatic] Found dist at: ${p}`);
       distPath = p;
       break;
     }
   }
 
   if (!distPath) {
-    console.error("[serveStatic] Could not find dist directory in any of these locations:");
-    possiblePaths.forEach(p => console.error(`  - ${p}`));
-    console.error("[serveStatic] Falling back to serving error page");
-    
+    console.error("[serveStatic] Could not find dist directory");
     app.use("*", (_req, res) => {
-      res.status(500).send(`
-        <html>
-          <body style="font-family: Arial; padding: 20px;">
-            <h1>Build Error</h1>
-            <p>The application build files could not be found. Please check the deployment logs.</p>
-            <p>Expected dist directory at one of these locations:</p>
-            <ul>
-              ${possiblePaths.map(p => `<li>${p}</li>`).join("")}
-            </ul>
-          </body>
-        </html>
-      `);
+      res.status(500).send("Build files not found");
     });
     return;
   }
 
-  // Check if index.html exists
   const indexPath = path.resolve(distPath, "index.html");
-  if (!fs.existsSync(indexPath)) {
-    console.error(`[serveStatic] index.html not found at: ${indexPath}`);
-    console.error(`[serveStatic] Contents of ${distPath}:`);
-    try {
-      const contents = fs.readdirSync(distPath);
-      contents.forEach(f => console.error(`  - ${f}`));
-    } catch (e) {
-      console.error(`[serveStatic] Could not read directory: ${e}`);
-    }
-  }
-
+  
   // Serve static files
-  console.log(`[serveStatic] Serving static files from: ${distPath}`);
-  app.use(express.static(distPath, { 
-    maxAge: "1h",
-    etag: false 
-  }));
+  app.use(express.static(distPath));
 
   // Fallback to index.html for all other routes (SPA routing)
-  app.use("*", (_req, res) => {
-    console.log(`[serveStatic] Serving index.html for route: ${_req.path}`);
-    res.sendFile(indexPath, (err) => {
-      if (err) {
-        console.error(`[serveStatic] Error sending index.html: ${err.message}`);
-        res.status(500).send("Error loading application");
-      }
-    });
+  app.get("*", (_req, res) => {
+    res.sendFile(indexPath);
   });
 }

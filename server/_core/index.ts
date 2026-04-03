@@ -54,6 +54,7 @@ async function startServer() {
       createContext,
     })
   );
+  
   // Always use Vite for serving frontend (development and production)
   // This ensures files are served dynamically without build issues
   await setupVite(app, server);
