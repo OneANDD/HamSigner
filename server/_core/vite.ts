@@ -20,27 +20,34 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
+  // Use Vite's middleware for handling assets and HMR
   app.use(vite.middlewares);
+
+  // Fallback: serve index.html for all routes (SPA routing)
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
     try {
-      const clientTemplate = path.resolve(
-        import.meta.dirname,
-        "../..",
-        "client",
-        "index.html"
-      );
+      // Get the index.html path from Vite config root
+      const clientRoot = path.resolve(import.meta.dirname, "../../", "client");
+      const clientTemplate = path.resolve(clientRoot, "index.html");
 
-      // always reload the index.html file from disk incase it changes
+      console.log(`[setupVite] Serving for URL: ${url}`);
+      console.log(`[setupVite] Template path: ${clientTemplate}`);
+      console.log(`[setupVite] Template exists: ${fs.existsSync(clientTemplate)}`);
+
+      // Always reload the index.html file from disk in case it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
       );
+      
+      // Transform the template through Vite
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
+      console.error(`[setupVite] Error serving page:`, e);
       vite.ssrFixStacktrace(e as Error);
       next(e);
     }
