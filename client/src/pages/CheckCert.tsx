@@ -194,18 +194,19 @@ export default function CheckCert() {
                 </div>
               </div>
 
-              {/* Password */}
+              {/* Password - only show if needed */}
               <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-sm font-medium text-foreground">P12 Password</Label>
+                <Label htmlFor="password" className="text-sm font-medium text-muted-foreground">P12 Password (Optional)</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter P12 password"
+                  placeholder="Enter P12 password if required"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
                   className="bg-input text-foreground placeholder:text-muted-foreground"
                 />
+                <p className="text-xs text-muted-foreground">Only needed if your P12 file is password-protected</p>
               </div>
 
               {/* Error */}

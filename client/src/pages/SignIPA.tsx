@@ -222,7 +222,7 @@ function ResultsPanel({ result }: ResultsPanelProps) {
           download
           className="inline-flex items-center justify-center w-full gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
         >
-          <Download className="w-4 h-4" /> Download to Computer
+          <Download className="w-4 h-4" /> Install Signed IPA to iPhone/iPad
         </a>
       </div>
 
