@@ -8,6 +8,7 @@ import https from "https";
 import { storagePut } from "./storage";
 import { createSigningJob, updateSigningJob, getSigningJob } from "./db";
 import { signIpa, extractIpaMetadata, generateManifestPlist } from "./signingService";
+import { notifySigningError, notifySigningSuccess } from "./discordNotification";
 
 const router = express.Router();
 
@@ -33,45 +34,116 @@ const upload = multer({
       ipa: ["application/octet-stream", "application/zip", "application/x-ios-app"],
       p12: ["application/x-pkcs12", "application/octet-stream"],
       mobileprovision: ["application/octet-stream"],
+      provision: ["application/octet-stream", "application/x-apple-aspen-mobileprovision"], // Accept both names
     };
     const field = file.fieldname as keyof typeof allowed;
     if (!allowed[field]) {
       return cb(new Error(`Unexpected field: ${file.fieldname}`));
     }
+    const mimeTypes = allowed[field];
+    if (!mimeTypes.includes(file.mimetype)) {
+      return cb(new Error(`Invalid MIME type for ${field}: ${file.mimetype}`));
+    }
     cb(null, true);
   },
 });
 
-const uploadFields = upload.fields([
-  { name: "ipa", maxCount: 1 },
-  { name: "p12", maxCount: 1 },
-  { name: "mobileprovision", maxCount: 1 },
-]);
-
 // Helper to download file from URL
 function downloadFile(url: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    https.get(url, (response) => {
-      const chunks: Buffer[] = [];
-      response.on('data', (chunk) => chunks.push(chunk));
-      response.on('end', () => resolve(Buffer.concat(chunks)));
-      response.on('error', reject);
-    }).on('error', reject);
+    const makeRequest = (currentUrl: string) => {
+      https.get(currentUrl, (response) => {
+        if (response.statusCode === 301 || response.statusCode === 302 || response.statusCode === 307 || response.statusCode === 308) {
+          const redirectUrl = response.headers.location;
+          if (redirectUrl) {
+            console.log(`[download] Redirecting to ${redirectUrl}`);
+            makeRequest(redirectUrl);
+            return;
+          }
+        }
+        if (response.statusCode !== 200) {
+          reject(new Error(`HTTP ${response.statusCode}`));
+          return;
+        }
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('end', () => {
+          const buffer = Buffer.concat(chunks);
+          console.log(`[download] Downloaded ${buffer.length} bytes`);
+          resolve(buffer);
+        });
+        response.on('error', reject);
+      }).on('error', reject);
+    };
+    makeRequest(url);
   });
 }
 
 // POST /api/sign — accepts multipart form with (ipa OR ipaUrl), p12, mobileprovision, password
-router.post("/sign", (req: Request, res: Response) => {
-  uploadFields(req, res, async (err) => {
+router.post("/sign", (req: Request, res: Response, next) => {
+  // Use .any() to accept all fields, then manually validate
+  multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ipa-upload-"));
+        cb(null, dir);
+      },
+      filename: (_req, file, cb) => {
+        const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+        cb(null, safe);
+      },
+    }),
+    limits: {
+      fileSize: 500 * 1024 * 1024,
+      files: 3,
+    },
+  }).any()(req, res, (err) => {
     if (err) {
       return res.status(400).json({ error: err.message || "File upload failed" });
     }
-
-    const files = req.files as Record<string, Express.Multer.File[]>;
+    
+    // Manually validate uploaded files
+    const files = req.files as Express.Multer.File[] || [];
+    console.log("[sign] Received files:", files.map(f => ({ fieldname: f.fieldname, mimetype: f.mimetype })));
+    console.log("[sign] Received body:", Object.keys(req.body));
+    const allowed: Record<string, string[]> = {
+      ipa: ["application/octet-stream", "application/zip", "application/x-ios-app"],
+      p12: ["application/x-pkcs12", "application/octet-stream"],
+      mobileprovision: ["application/octet-stream"],
+      provision: ["application/octet-stream", "application/x-apple-aspen-mobileprovision"], // Accept both names
+    };
+    
+    for (const file of files) {
+      const field = file.fieldname as keyof typeof allowed;
+      console.log(`[sign] Validating field: ${field}, MIME: ${file.mimetype}`);
+      if (!allowed[field]) {
+        console.log(`[sign] Field ${field} not in allowed list:`, Object.keys(allowed));
+        return res.status(400).json({ error: `Unexpected field: ${file.fieldname}` });
+      }
+      const mimeTypes = allowed[field];
+      if (!mimeTypes.includes(file.mimetype)) {
+        return res.status(400).json({ error: `Invalid MIME type for ${field}: ${file.mimetype}` });
+      }
+    }
+    
+    next();
+  });
+}, async (req: Request, res: Response) => {
+  try {
+    // Convert files array to keyed object
+    const filesArray = req.files as Express.Multer.File[] || [];
+    const files: Record<string, Express.Multer.File[]> = {};
+    for (const file of filesArray) {
+      if (!files[file.fieldname]) {
+        files[file.fieldname] = [];
+      }
+      files[file.fieldname].push(file);
+    }
+    
     const ipaUrl: string | undefined = (req.body?.ipaUrl as string) || undefined;
     const ipaFile = files?.ipa?.[0];
     const p12File = files?.p12?.[0];
-    const provFile = files?.mobileprovision?.[0];
+    const provFile = files?.mobileprovision?.[0] || files?.provision?.[0]; // Accept both field names
     const password: string = (req.body?.password as string) ?? "";
     const bundleIdOverride: string | undefined = (req.body?.bundleIdOverride as string) || undefined;
     const appNameOverride: string | undefined = (req.body?.appNameOverride as string) || undefined;
@@ -116,14 +188,20 @@ router.post("/sign", (req: Request, res: Response) => {
       // ---- Sign the IPA ----
       await updateSigningJob(jobId, { status: "signing" });
 
+      // Copy P12 and provisioning files to the same temp directory as the IPA
+      const p12Path = path.join(tmpDir, path.basename(p12File.path));
+      const provPath = path.join(tmpDir, path.basename(provFile.path));
+      fs.copyFileSync(p12File.path, p12Path);
+      fs.copyFileSync(provFile.path, provPath);
+
       const signedIpaName = `signed_${ipaOriginalName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const outputPath = path.join(tmpDir, signedIpaName);
 
       const signingResult = await signIpa(
         ipaPath,
-        p12File.path,
+        p12Path,
         password,
-        provFile.path,
+        provPath,
         outputPath
       );
 
@@ -132,6 +210,8 @@ router.post("/sign", (req: Request, res: Response) => {
           status: "error",
           errorMessage: signingResult.error,
         });
+        const discordWebhook = process.env.DISCORD_WEBHOOK_URL;
+        await notifySigningError(discordWebhook, jobId, ipaOriginalName, signingResult.error || "Unknown error");
         return res.status(422).json({ jobId, error: signingResult.error });
       }
 
@@ -179,6 +259,9 @@ router.post("/sign", (req: Request, res: Response) => {
         expiresAt,
       });
 
+      const discordWebhook = process.env.DISCORD_WEBHOOK_URL;
+      await notifySigningSuccess(discordWebhook, jobId, appName, bundleId, appVersion);
+
       return res.json({
         jobId,
         status: "done",
@@ -202,7 +285,10 @@ router.post("/sign", (req: Request, res: Response) => {
         // ignore cleanup errors
       }
     }
-  });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return res.status(400).json({ error: msg || "Request processing failed" });
+  }
 });
 
 // GET /api/sign/:jobId — poll job status

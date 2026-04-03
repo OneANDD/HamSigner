@@ -43,13 +43,14 @@ export async function signIpa(
       console.log(`[signIpa] zsign completed successfully`);
     } catch (zsignErr: unknown) {
       const zsignError = zsignErr as NodeJS.ErrnoException & { stderr?: string; stdout?: string };
-      console.error(`[signIpa] zsign failed:`, {
-        message: zsignError?.message,
-        code: zsignError?.code,
-        stderr: zsignError?.stderr,
-        stdout: zsignError?.stdout,
-      });
-      throw zsignErr;
+      const errorMsg = zsignError?.stderr || zsignError?.stdout || zsignError?.message || String(zsignErr);
+      console.error(`[signIpa] zsign failed with error:`);
+      console.error(`  Message: ${zsignError?.message}`);
+      console.error(`  Code: ${zsignError?.code}`);
+      console.error(`  Stderr: ${zsignError?.stderr}`);
+      console.error(`  Stdout: ${zsignError?.stdout}`);
+      console.error(`  Full error: ${errorMsg}`);
+      return { success: false, error: `zsign failed: ${errorMsg}` };
     }
 
     // Verify output file exists

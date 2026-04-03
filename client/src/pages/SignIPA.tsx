@@ -271,7 +271,7 @@ export default function SignIPA() {
     }
 
     formData.append("p12", p12File);
-    formData.append("provision", provFile);
+    formData.append("mobileprovision", provFile);
     formData.append("password", password);
     if (bundleIdOverride) formData.append("bundleIdOverride", bundleIdOverride);
     if (appNameOverride) formData.append("appNameOverride", appNameOverride);
@@ -399,7 +399,7 @@ export default function SignIPA() {
                   <div className="space-y-1.5">
                     <Label className="text-sm font-medium text-foreground">IPA URL</Label>
                     <Input
-                      type="url"
+                      type="text"
                       placeholder="https://example.com/app.ipa"
                       className="w-full"
                       disabled={isProcessing || !!ipaFile}
