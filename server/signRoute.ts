@@ -73,6 +73,8 @@ router.post("/sign", (req: Request, res: Response) => {
     const p12File = files?.p12?.[0];
     const provFile = files?.mobileprovision?.[0];
     const password: string = (req.body?.password as string) ?? "";
+    const bundleIdOverride: string | undefined = (req.body?.bundleIdOverride as string) || undefined;
+    const appNameOverride: string | undefined = (req.body?.appNameOverride as string) || undefined;
 
     if ((!ipaFile && !ipaUrl) || !p12File || !provFile) {
       return res.status(400).json({ error: "Missing required files: (ipa or ipaUrl), p12, mobileprovision" });
@@ -135,8 +137,8 @@ router.post("/sign", (req: Request, res: Response) => {
 
       // ---- Extract metadata ----
       const meta = await extractIpaMetadata(outputPath);
-      const appName = meta.appName || ipaOriginalName.replace(/\.ipa$/i, "");
-      const bundleId = meta.bundleId || "com.unknown.app";
+      const appName = appNameOverride || meta.appName || ipaOriginalName.replace(/\.ipa$/i, "");
+      const bundleId = bundleIdOverride || meta.bundleId || "com.unknown.app";
       const appVersion = meta.appVersion || "1.0";
 
       // ---- Upload signed IPA to S3 ----
