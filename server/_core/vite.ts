@@ -49,6 +49,7 @@ export async function setupVite(app: Express, server: Server) {
 export function serveStatic(app: Express) {
   // Try multiple possible dist paths
   const possiblePaths = [
+    path.resolve(import.meta.dirname, "../../", "client", "dist"),
     path.resolve(import.meta.dirname, "../", "dist", "public"),
     path.resolve(import.meta.dirname, "../", "dist"),
   ];
