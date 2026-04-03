@@ -140,3 +140,10 @@
 
 ## UI Enhancements
 - [x] Add Discord server link card to homepage footer
+
+## Bug Fixes - Discord & P12 Handling
+- [x] Fix Discord card visibility on homepage (changed to block-level div)
+- [x] Fix P12 file corruption with larger files (added file size verification)
+- [x] Add file size verification before copying P12 and provisioning files
+- [x] Add file size verification in signIpa before calling zsign
+- [x] Add better error messages for P12 parsing failures (mac verify, format errors)

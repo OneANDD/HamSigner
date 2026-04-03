@@ -28,6 +28,13 @@ export async function signIpa(
       if (!fs.existsSync(p)) {
         return { success: false, error: `${label} file not found: ${p}` };
       }
+      
+      // Verify file size
+      const stats = fs.statSync(p);
+      if (stats.size === 0) {
+        return { success: false, error: `${label} file is empty (0 bytes): ${p}` };
+      }
+      console.log(`[signIpa] ${label} file verified: ${stats.size} bytes at ${p}`);
     }
 
     // Use provided outputPath or generate default
@@ -50,7 +57,17 @@ export async function signIpa(
       console.error(`  Stderr: ${zsignError?.stderr}`);
       console.error(`  Stdout: ${zsignError?.stdout}`);
       console.error(`  Full error: ${errorMsg}`);
-      return { success: false, error: `zsign failed: ${errorMsg}` };
+      // Provide more helpful error messages based on common zsign failures
+      let userError = `zsign failed: ${errorMsg}`;
+      if (errorMsg.includes("mac verify failure")) {
+        userError = "P12 certificate verification failed. This usually means: (1) Incorrect password, (2) Corrupted P12 file, or (3) Unsupported certificate format. Please verify your P12 file and password.";
+      } else if (errorMsg.includes("Can't load p12")) {
+        userError = "Failed to load P12 certificate. The file may be corrupted or in an unsupported format. Please verify your P12 file.";
+      } else if (errorMsg.includes("DECODER") || errorMsg.includes("asn1")) {
+        userError = "P12 file format error. The file may be corrupted or not a valid PKCS#12 certificate. Please verify your P12 file is valid.";
+      }
+      
+      return { success: false, error: userError };
     }
 
     // Verify output file exists

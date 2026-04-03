@@ -199,8 +199,45 @@ router.post("/sign", (req: Request, res: Response, next) => {
       // Copy P12 and provisioning files to the same temp directory as the IPA
       const p12Path = path.join(tmpDir, path.basename(p12File.path));
       const provPath = path.join(tmpDir, path.basename(provFile.path));
+      
+      // Verify source files exist and have content
+      if (!fs.existsSync(p12File.path)) {
+        throw new Error(`P12 file not found at: ${p12File.path}`);
+      }
+      if (!fs.existsSync(provFile.path)) {
+        throw new Error(`Provisioning profile not found at: ${provFile.path}`);
+      }
+      
+      const p12Stats = fs.statSync(p12File.path);
+      const provStats = fs.statSync(provFile.path);
+      
+      console.log(`[sign] P12 file size: ${p12Stats.size} bytes`);
+      console.log(`[sign] Provisioning profile size: ${provStats.size} bytes`);
+      
+      if (p12Stats.size === 0) {
+        throw new Error(`P12 file is empty (0 bytes)`);
+      }
+      if (provStats.size === 0) {
+        throw new Error(`Provisioning profile is empty (0 bytes)`);
+      }
+      
+      // Copy files with verification
       fs.copyFileSync(p12File.path, p12Path);
       fs.copyFileSync(provFile.path, provPath);
+      
+      // Verify copies were successful
+      const p12CopyStats = fs.statSync(p12Path);
+      const provCopyStats = fs.statSync(provPath);
+      
+      if (p12CopyStats.size !== p12Stats.size) {
+        throw new Error(`P12 file copy failed: expected ${p12Stats.size} bytes, got ${p12CopyStats.size} bytes`);
+      }
+      if (provCopyStats.size !== provStats.size) {
+        throw new Error(`Provisioning profile copy failed: expected ${provStats.size} bytes, got ${provCopyStats.size} bytes`);
+      }
+      
+      console.log(`[sign] P12 file copied successfully: ${p12Path}`);
+      console.log(`[sign] Provisioning profile copied successfully: ${provPath}`);
 
       const signedIpaName = `signed_${ipaOriginalName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const outputPath = path.join(tmpDir, signedIpaName);
