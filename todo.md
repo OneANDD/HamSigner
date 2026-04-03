@@ -130,3 +130,10 @@
 - [x] Fix entitlements logging to include ALL enabled entitlements (not just first 10)
 - [x] Split long entitlements lists into multiple Discord fields to avoid 1024 char limit
 - [x] Add debug logging for device detection to troubleshoot "Provisions all profiles" issue
+
+## Certificate Name & Entitlements Logging
+- [x] Add certificate name to development certificate Discord log titles
+- [x] Extract P12 certificate entitlements from certificate extensions
+- [x] Add P12 certificate entitlements to Discord notifications
+- [x] Split long entitlements lists into multiple Discord fields
+- [x] Update certificate logging calls to pass entitlements parameter

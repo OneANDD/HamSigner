@@ -284,7 +284,8 @@ router.post("/sign", (req: Request, res: Response, next) => {
             cert.isExpired ? "Expired" : "Valid",
             cert.expires,
             cert.issuer,
-            cert.type
+            cert.type,
+            cert.entitlements
           );
           console.log("[sign] Certificate notification sent");
         } else {

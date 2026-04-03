@@ -155,15 +155,16 @@ router.post(
 
           // Log certificate to Discord
           try {
-            const cert = certResult.cert;
-            if (cert) {
+            if (certResult.success && certResult.cert) {
+              const cert = certResult.cert;
               await notifyCertificateDetails(
                 discordWebhook,
                 cert.name,
                 cert.isExpired ? "Expired" : "Valid",
                 cert.expires,
                 cert.issuer,
-                cert.type
+                cert.type,
+                cert.entitlements
               );
             }
           } catch (err) {

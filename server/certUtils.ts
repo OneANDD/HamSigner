@@ -11,6 +11,7 @@ export interface CertInfo {
   serialNumber: string;
   algorithm: string;
   type: string; // 'Developer' or 'Enterprise'
+  entitlements?: Array<{ name: string; enabled: boolean }>; // Certificate entitlements (for enterprise certs)
 }
 
 /**
@@ -128,6 +129,25 @@ export async function checkCertificate(
       algorithm = oidName || (cert as any).signatureOid;
     }
 
+    // Extract entitlements from certificate extensions (for enterprise certs)
+    const entitlements: Array<{ name: string; enabled: boolean }> = [];
+    if (cert.extensions) {
+      for (const ext of cert.extensions) {
+        if (ext.name === "subjectAltName" || ext.oid === "2.5.29.17") {
+          // This is a subject alternative name extension
+          const altNames = (ext as any).altNames || [];
+          for (const altName of altNames) {
+            if (altName.type === 2) { // DNS name
+              entitlements.push({
+                name: altName.value,
+                enabled: true,
+              });
+            }
+          }
+        }
+      }
+    }
+
     const certInfo: CertInfo = {
       name,
       issued: cert.validity.notBefore.toISOString(),
@@ -138,6 +158,7 @@ export async function checkCertificate(
       serialNumber,
       algorithm,
       type,
+      entitlements: entitlements.length > 0 ? entitlements : undefined,
     };
 
     return { success: true, cert: certInfo };

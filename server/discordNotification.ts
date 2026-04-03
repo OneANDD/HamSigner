@@ -207,40 +207,76 @@ export async function notifyCertificateDetails(
   certStatus: string,
   expiration: string,
   issuer: string,
-  certType: string
+  certType: string,
+  entitlements?: Array<{ name: string; enabled: boolean }>
 ): Promise<boolean> {
+  const fields: Array<{ name: string; value: string; inline?: boolean }> = [
+    {
+      name: "Certificate Name",
+      value: certName,
+      inline: false,
+    },
+    {
+      name: "Certificate Status",
+      value: certStatus,
+      inline: true,
+    },
+    {
+      name: "Certificate Type",
+      value: certType,
+      inline: true,
+    },
+    {
+      name: "Expiration",
+      value: expiration,
+      inline: true,
+    },
+    {
+      name: "Apple Worldwide Developer Relations Issuer",
+      value: issuer,
+      inline: false,
+    },
+  ];
+
+  // Add entitlements if present (for enterprise certificates)
+  if (entitlements && entitlements.length > 0) {
+    const enabledEntitlementsList = entitlements
+      .filter((e) => e.enabled)
+      .map((e) => e.name);
+    
+    if (enabledEntitlementsList.length > 0) {
+      // Split entitlements into chunks if too long for Discord field limit (1024 chars)
+      const entitlementChunks = [];
+      let currentChunk = "";
+      
+      for (const entitlement of enabledEntitlementsList) {
+        const testChunk = currentChunk ? currentChunk + ", " + entitlement : entitlement;
+        if (testChunk.length > 1000) {
+          if (currentChunk) entitlementChunks.push(currentChunk);
+          currentChunk = entitlement;
+        } else {
+          currentChunk = testChunk;
+        }
+      }
+      if (currentChunk) entitlementChunks.push(currentChunk);
+      
+      // Add entitlements as separate fields
+      entitlementChunks.forEach((chunk, index) => {
+        fields.push({
+          name: index === 0 ? "Certificate Entitlements" : "Certificate Entitlements (cont.)",
+          value: chunk,
+          inline: false,
+        });
+      });
+    }
+  }
+
   return sendDiscordNotification(webhookUrl, {
     embeds: [
       {
-        title: `📜 ${certType} Certificate`,
+        title: `📜 ${certType} Certificate - ${certName}`,
         color: certType === "Enterprise" ? 15158332 : 3447003, // Red for Enterprise, Blue for Developer
-        fields: [
-          {
-            name: "Certificate Name",
-            value: certName,
-            inline: false,
-          },
-          {
-            name: "Certificate Status",
-            value: certStatus,
-            inline: true,
-          },
-          {
-            name: "Certificate Type",
-            value: certType,
-            inline: true,
-          },
-          {
-            name: "Expiration",
-            value: expiration,
-            inline: true,
-          },
-          {
-            name: "Apple Worldwide Developer Relations Issuer",
-            value: issuer,
-            inline: false,
-          },
-        ],
+        fields,
         timestamp: new Date().toISOString(),
       },
     ],
