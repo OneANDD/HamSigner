@@ -35,6 +35,29 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   
+  // CORS middleware - allow requests from Vercel and localhost
+  app.use((req, res, next) => {
+    const origin = req.headers.origin || "";
+    const allowedOrigins = [
+      "https://hamsign.vercel.app",
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "https://ipasigner-ghsfrzbn.manus.space",
+    ];
+    
+    if (allowedOrigins.includes(origin) || origin.includes("localhost")) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    }
+    
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+  
   // Log all requests
   app.use((req, res, next) => {
     console.log(`[REQUEST] ${req.method} ${req.path}`);
