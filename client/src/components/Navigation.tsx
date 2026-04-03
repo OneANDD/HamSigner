@@ -13,15 +13,13 @@ export function Navigation() {
     <nav className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-20">
       <div className="container flex items-center justify-between h-14">
         {/* Logo */}
-        <Link href="/">
-          <a className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
-              <ShieldCheck className="w-4.5 h-4.5 text-primary" />
-            </div>
-            <span className="font-semibold text-foreground tracking-tight hidden sm:inline">
-              IPA Signer
-            </span>
-          </a>
+        <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+          <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
+            <ShieldCheck className="w-4.5 h-4.5 text-primary" />
+          </div>
+          <span className="font-semibold text-foreground tracking-tight hidden sm:inline">
+            IPA Signer
+          </span>
         </Link>
 
         {/* Nav links */}
