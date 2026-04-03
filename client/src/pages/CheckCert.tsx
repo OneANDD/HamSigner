@@ -51,11 +51,11 @@ export default function CheckCert() {
 
   const handleFileSelect = (f: File) => {
     // Validate file type
-    const isP12 = f.name.endsWith(".p12") || f.name.endsWith(".pfx");
+    const isP12 = f.name.endsWith(".p12");
     const isMobileProvision = f.name.endsWith(".mobileprovision");
 
     if (!isP12 && !isMobileProvision) {
-      setError("Please select a valid P12 certificate (.p12, .pfx) or provisioning profile (.mobileprovision)");
+      setError("Please select a valid P12 certificate (.p12) or provisioning profile (.mobileprovision)");
       return;
     }
 
@@ -96,7 +96,7 @@ export default function CheckCert() {
     // Determine file type and append with correct key
     if (file.name.endsWith(".mobileprovision")) {
       formData.append("mobileprovision", file);
-    } else {
+    } else if (file.name.endsWith(".p12")) {
       formData.append("cert", file);
       if (password) formData.append("password", password);
     }
@@ -136,7 +136,7 @@ export default function CheckCert() {
 
   const getFileDisplay = () => {
     if (!file) return "Click to select or drag & drop";
-    const isP12 = file.name.endsWith(".p12") || file.name.endsWith(".pfx");
+    const isP12 = file.name.endsWith(".p12");
     return `${isP12 ? "📄 P12 Certificate" : "📱 Provisioning Profile"}: ${file.name}`;
   };
 
@@ -175,7 +175,7 @@ export default function CheckCert() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".p12,.pfx,.mobileprovision"
+                    accept=".p12,.mobileprovision"
                     className="hidden"
                     disabled={loading}
                     onChange={(e) => {
@@ -187,14 +187,14 @@ export default function CheckCert() {
                     <div className="text-muted-foreground"><Upload className="w-5 h-5" /></div>
                     <div className="text-left">
                       <div className="text-sm font-medium text-foreground">{getFileDisplay()}</div>
-                      {!file && <div className="text-xs text-muted-foreground">Supports .p12, .pfx, or .mobileprovision files</div>}
+                      {!file && <div className="text-xs text-muted-foreground">Supports .p12 or .mobileprovision files</div>}
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Password - only show if P12 is selected */}
-              {file && (file.name.endsWith(".p12") || file.name.endsWith(".pfx")) && (
+              {file && file.name.endsWith(".p12") && (
                 <div className="space-y-1.5">
                   <Label htmlFor="password" className="text-sm font-medium text-muted-foreground">P12 Password (Optional)</Label>
                   <Input
