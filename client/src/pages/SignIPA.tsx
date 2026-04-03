@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback } from "react";
+import { useLocation } from "wouter";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -215,10 +217,10 @@ function ResultsPanel({ result }: { result: SignResult }) {
       </div>
 
       {/* Download signed IPA */}
-      <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <Download className="w-4 h-4 text-primary" />
-          Signed IPA Download
+          Download Signed IPA
         </div>
         <div className="flex items-center gap-2 bg-muted rounded px-3 py-2">
           <span className="flex-1 text-xs font-mono text-muted-foreground truncate">{result.signedIpaUrl}</span>
@@ -227,9 +229,9 @@ function ResultsPanel({ result }: { result: SignResult }) {
         <a
           href={result.signedIpaUrl}
           download
-          className="inline-flex items-center gap-2 text-xs text-primary hover:underline"
+          className="inline-flex items-center justify-center w-full gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
         >
-          <Download className="w-3.5 h-3.5" /> Download signed IPA
+          <Download className="w-4 h-4" /> Download to Computer
         </a>
       </div>
 
@@ -271,6 +273,7 @@ function ResultsPanel({ result }: { result: SignResult }) {
 
 // ---- Main Page ----
 export default function SignIPA() {
+  const [location] = useLocation();
   const [ipaFile, setIpaFile] = useState<File | null>(null);
   const [p12File, setP12File] = useState<File | null>(null);
   const [provFile, setProvFile] = useState<File | null>(null);
@@ -285,6 +288,16 @@ export default function SignIPA() {
   const [stage, setStage] = useState<Stage>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [result, setResult] = useState<SignResult | null>(null);
+
+  useEffect(() => {
+    if (location.includes("?")) {
+      const params = new URLSearchParams(location.split("?")[1]);
+      const appName = params.get("name");
+      const bundleId = params.get("bundleId");
+      if (appName) setAppNameOverride(appName);
+      if (bundleId) setBundleIdOverride(bundleId);
+    }
+  }, [location]);
 
   const canSubmit =
     ipaFile !== null && p12File !== null && provFile !== null && stage === "idle";

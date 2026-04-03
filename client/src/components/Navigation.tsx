@@ -1,9 +1,10 @@
 import { Link } from "wouter";
-import { ShieldCheck, FileKey, Lock } from "lucide-react";
+import { ShieldCheck, FileKey, Lock, Package } from "lucide-react";
 
 export function Navigation() {
   const navItems = [
     { href: "/", label: "Home", icon: null },
+    { href: "/apps", label: "Apps", icon: Package },
     { href: "/signipa", label: "Sign IPA", icon: ShieldCheck },
     { href: "/checkcert", label: "Check Pass", icon: FileKey },
     { href: "/certpass", label: "Change Pass", icon: Lock },

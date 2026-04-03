@@ -46,3 +46,10 @@
 - [x] Fix nested anchor tag error on Change Pass page
 - [x] Fix nested anchor tag error on Landing page
 - [x] Add credits section at bottom of homepage with Ham and Manus cards
+
+## New Features - App Repository & Download
+- [x] Create public app repository page with 5 apps (KSign, ESign, Feather, GBox, Scarlet)
+- [x] Add app cards with descriptions and "Sign App" buttons
+- [x] Implement app signing flow (pre-populate app name/bundle ID)
+- [x] Add direct download option for signed IPA in results section
+- [x] Update results UI to show both ITMS link and direct download button
