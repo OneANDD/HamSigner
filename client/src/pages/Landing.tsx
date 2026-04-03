@@ -50,20 +50,16 @@ export default function Landing() {
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
             <Link href="/signipa">
-              <a>
-                <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium">
-                  <ShieldCheck className="w-4 h-4 mr-2" />
-                  Start Signing
-                </Button>
-              </a>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium">
+                <ShieldCheck className="w-4 h-4 mr-2" />
+                Start Signing
+              </Button>
             </Link>
             <Link href="/checkcert">
-              <a>
-                <Button variant="outline" className="border-border text-foreground hover:bg-accent">
-                  <FileKey className="w-4 h-4 mr-2" />
-                  Check Certificate
-                </Button>
-              </a>
+              <Button variant="outline" className="border-border text-foreground hover:bg-accent">
+                <FileKey className="w-4 h-4 mr-2" />
+                Check Certificate
+              </Button>
             </Link>
           </div>
         </div>
