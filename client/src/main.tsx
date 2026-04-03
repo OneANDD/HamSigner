@@ -40,14 +40,12 @@ queryClient.getMutationCache().subscribe(event => {
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: typeof window !== "undefined" && window.location.hostname === "hamsign.vercel.app"
+        ? "https://ipasigner-ghsfrzbn.manus.space/api/trpc"
+        : "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
-        // Ensure absolute URL for fetch
-        const url = typeof input === 'string' && !input.startsWith('http') 
-          ? `${typeof window !== 'undefined' ? window.location.origin : ''}${input}`
-          : input;
-        return globalThis.fetch(url, {
+        return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
         });
