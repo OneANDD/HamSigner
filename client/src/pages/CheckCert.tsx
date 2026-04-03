@@ -4,14 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Upload,
-  FileKey,
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Calendar,
   Shield,
   Loader2,
-  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,31 +41,49 @@ interface CheckResult {
 }
 
 export default function CheckCert() {
-  const [certFile, setCertFile] = useState<File | null>(null);
-  const [provFile, setProvFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const certInputRef = useRef<HTMLInputElement>(null);
-  const provInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleCertFileSelect = (f: File) => {
-    setCertFile(f);
+  const handleFileSelect = (f: File) => {
+    // Validate file type
+    const isP12 = f.name.endsWith(".p12") || f.name.endsWith(".pfx");
+    const isMobileProvision = f.name.endsWith(".mobileprovision");
+
+    if (!isP12 && !isMobileProvision) {
+      setError("Please select a valid P12 certificate (.p12, .pfx) or provisioning profile (.mobileprovision)");
+      return;
+    }
+
+    setFile(f);
     setError(null);
     setResult(null);
   };
 
-  const handleProvFileSelect = (f: File) => {
-    setProvFile(f);
-    setError(null);
-    setResult(null);
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) handleFileSelect(f);
   };
 
   const handleCheck = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!certFile && !provFile) {
-      setError("At least one file (P12 certificate or provisioning profile) is required");
+    if (!file) {
+      setError("Please select a file (P12 certificate or provisioning profile)");
       return;
     }
 
@@ -77,9 +92,14 @@ export default function CheckCert() {
     setResult(null);
 
     const formData = new FormData();
-    if (certFile) formData.append("cert", certFile);
-    if (provFile) formData.append("mobileprovision", provFile);
-    if (password) formData.append("password", password);
+    
+    // Determine file type and append with correct key
+    if (file.name.endsWith(".mobileprovision")) {
+      formData.append("mobileprovision", file);
+    } else {
+      formData.append("cert", file);
+      if (password) formData.append("password", password);
+    }
 
     try {
       const apiUrl = typeof window !== "undefined" && window.location.hostname === "hamsign.vercel.app"
@@ -108,11 +128,16 @@ export default function CheckCert() {
   };
 
   const handleReset = () => {
-    setCertFile(null);
-    setProvFile(null);
+    setFile(null);
     setPassword("");
     setResult(null);
     setError(null);
+  };
+
+  const getFileDisplay = () => {
+    if (!file) return "Click to select or drag & drop";
+    const isP12 = file.name.endsWith(".p12") || file.name.endsWith(".pfx");
+    return `${isP12 ? "📄 P12 Certificate" : "📱 Provisioning Profile"}: ${file.name}`;
   };
 
   return (
@@ -130,84 +155,60 @@ export default function CheckCert() {
           {/* Form card */}
           <div className="rounded-xl border border-border bg-card shadow-sm">
             <div className="px-6 py-5 border-b border-border">
-              <h2 className="font-semibold text-foreground">Upload Files</h2>
+              <h2 className="font-semibold text-foreground">Upload File</h2>
             </div>
 
             <form onSubmit={handleCheck} className="px-6 py-5 space-y-5">
-              {/* P12 Certificate */}
+              {/* Unified File Upload */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-foreground">P12 Certificate</Label>
+                <Label className="text-sm font-medium text-foreground">Certificate or Provisioning Profile</Label>
                 <div
                   className={`relative rounded-lg border-2 border-dashed transition-colors cursor-pointer select-none
-                    ${certFile ? "border-success/60 bg-success/5" : "border-border hover:border-primary/60 hover:bg-accent/30"}
+                    ${isDragging ? "border-primary/80 bg-primary/10" : ""}
+                    ${file ? "border-success/60 bg-success/5" : "border-border hover:border-primary/60 hover:bg-accent/30"}
                   `}
-                  onClick={() => certInputRef.current?.click()}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
                 >
                   <input
-                    ref={certInputRef}
+                    ref={fileInputRef}
                     type="file"
-                    accept=".p12,.pfx"
+                    accept=".p12,.pfx,.mobileprovision"
                     className="hidden"
                     disabled={loading}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
-                      if (f) handleCertFileSelect(f);
-                    }}
-                  />
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <div className="text-muted-foreground"><FileKey className="w-5 h-5" /></div>
-                    <div className="text-left">
-                      <div className="text-sm font-medium text-foreground">{certFile?.name || "Click to select P12 file"}</div>
-                      {!certFile && <div className="text-xs text-muted-foreground">Drag & drop or click to select</div>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Provisioning Profile */}
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-foreground">Provisioning Profile</Label>
-                <div
-                  className={`relative rounded-lg border-2 border-dashed transition-colors cursor-pointer select-none
-                    ${provFile ? "border-success/60 bg-success/5" : "border-border hover:border-primary/60 hover:bg-accent/30"}
-                  `}
-                  onClick={() => provInputRef.current?.click()}
-                >
-                  <input
-                    ref={provInputRef}
-                    type="file"
-                    accept=".mobileprovision"
-                    className="hidden"
-                    disabled={loading}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleProvFileSelect(f);
+                      if (f) handleFileSelect(f);
                     }}
                   />
                   <div className="flex items-center gap-3 px-4 py-3">
                     <div className="text-muted-foreground"><Upload className="w-5 h-5" /></div>
                     <div className="text-left">
-                      <div className="text-sm font-medium text-foreground">{provFile?.name || "Click to select provisioning profile"}</div>
-                      {!provFile && <div className="text-xs text-muted-foreground">Drag & drop or click to select</div>}
+                      <div className="text-sm font-medium text-foreground">{getFileDisplay()}</div>
+                      {!file && <div className="text-xs text-muted-foreground">Supports .p12, .pfx, or .mobileprovision files</div>}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Password - only show if needed */}
-              <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-sm font-medium text-muted-foreground">P12 Password (Optional)</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter P12 password if required"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  className="bg-input text-foreground placeholder:text-muted-foreground"
-                />
-                <p className="text-xs text-muted-foreground">Only needed if your P12 file is password-protected</p>
-              </div>
+              {/* Password - only show if P12 is selected */}
+              {file && (file.name.endsWith(".p12") || file.name.endsWith(".pfx")) && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="password" className="text-sm font-medium text-muted-foreground">P12 Password (Optional)</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter P12 password if required"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                    className="bg-input text-foreground placeholder:text-muted-foreground"
+                  />
+                  <p className="text-xs text-muted-foreground">Only needed if your P12 file is password-protected</p>
+                </div>
+              )}
 
               {/* Error */}
               {error && (
@@ -221,7 +222,7 @@ export default function CheckCert() {
               <div className="flex gap-2 pt-2">
                 <Button
                   type="submit"
-                  disabled={(!certFile && !provFile) || loading}
+                  disabled={!file || loading}
                   className="flex-1"
                 >
                   {loading ? (
@@ -236,7 +237,7 @@ export default function CheckCert() {
                     </>
                   )}
                 </Button>
-                {(certFile || provFile || password) && (
+                {file && (
                   <Button type="button" variant="outline" onClick={handleReset} disabled={loading}>
                     Reset
                   </Button>
@@ -253,7 +254,7 @@ export default function CheckCert() {
                 <div className="rounded-lg border border-border bg-card p-6 space-y-4">
                   <div className="flex items-center gap-2">
                     <Shield className="w-5 h-5 text-primary" />
-                    <h3 className="font-semibold text-foreground">💼 Certificate 1</h3>
+                    <h3 className="font-semibold text-foreground">💼 Certificate</h3>
                   </div>
                   
                   <div className="space-y-2 text-sm">
@@ -289,29 +290,29 @@ export default function CheckCert() {
                 </div>
               )}
 
-              {/* Provisioning Profile */}
+              {/* Provisioning Profile Info */}
               {result.profile && (
                 <div className="rounded-lg border border-border bg-card p-6 space-y-4">
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-primary" />
-                    <h3 className="font-semibold text-foreground">📋 Provisioning Profile</h3>
+                    <Shield className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-foreground">📱 Provisioning Profile</h3>
                   </div>
-                  
+
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">📋 Provision Name:</span>
+                      <span className="text-muted-foreground">📱 Profile name:</span>
                       <span className="font-medium text-foreground">{result.profile.name}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">📋 App ID:</span>
+                      <span className="text-muted-foreground">📱 App ID:</span>
                       <span className="font-medium text-foreground">{result.profile.appId}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">📋 Enterprise:</span>
-                      <span className="font-medium text-foreground">{result.profile.type} 🔴</span>
+                      <span className="text-muted-foreground">📱 Team ID:</span>
+                      <span className="font-medium text-foreground">{result.profile.teamId}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">📋 Status:</span>
+                      <span className="text-muted-foreground">📱 Profile status:</span>
                       <span className="font-medium flex items-center gap-1">
                         {result.profile.isExpired ? (
                           <>
@@ -321,28 +322,30 @@ export default function CheckCert() {
                         ) : (
                           <>
                             <CheckCircle2 className="w-4 h-4 text-success" />
-                            <span className="text-success">Signed 🟢</span>
+                            <span className="text-success">Active 🟢</span>
                           </>
                         )}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">📋 Expiration:</span>
+                      <span className="text-muted-foreground">📱 Expiration:</span>
                       <span className="font-medium text-foreground">{result.profile.expires}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">📱 Type:</span>
+                      <span className="font-medium text-foreground">{result.profile.type}</span>
                     </div>
                   </div>
 
                   {/* Entitlements */}
-                  {result.profile.entitlements && result.profile.entitlements.length > 0 && (
-                    <div className="pt-4 border-t border-border">
-                      <h4 className="font-medium text-foreground mb-3">📋 Entitlements ↓</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                  {result.profile.entitlements.length > 0 && (
+                    <div className="space-y-2 pt-4 border-t border-border">
+                      <h4 className="font-medium text-foreground">📋 Entitlements</h4>
+                      <div className="space-y-1">
                         {result.profile.entitlements.map((ent, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <span className={ent.enabled ? "text-success" : "text-destructive"}>
-                              {ent.enabled ? "🟢" : "🔴"}
-                            </span>
-                            <span className="text-foreground">{ent.name}</span>
+                          <div key={idx} className="flex items-center gap-2 text-sm">
+                            <span className="text-lg">{ent.enabled ? "🟢" : "🔴"}</span>
+                            <span className="text-muted-foreground">{ent.name}</span>
                           </div>
                         ))}
                       </div>
