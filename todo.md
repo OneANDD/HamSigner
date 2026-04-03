@@ -90,3 +90,8 @@
 - [x] Fix node-forge certificate parsing for P12 files
 - [x] Test Check Pass feature
 - [x] Test Change Pass feature
+
+## Railway Deployment
+- [x] Fix Dockerfile zsign compilation error (use pre-built binary instead)
+- [ ] Test Railway deployment with fixed Dockerfile
+- [ ] Verify IPA signing works on Railway

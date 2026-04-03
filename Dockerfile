@@ -1,30 +1,18 @@
 FROM node:22-slim
 
-# Install build dependencies for zsign compilation + runtime libraries
+# Install runtime dependencies (no build tools needed since we're using pre-built zsign)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    g++ \
-    pkg-config \
     libssl-dev \
     libzip-dev \
     libmbedtls-dev \
-    unzip \
-    zip \
     curl \
-    make \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Build zsign from source
-RUN git clone --depth=1 https://github.com/zhlynn/zsign /tmp/zsign \
-    && cd /tmp/zsign/build/linux \
-    && make clean && make \
-    && cp /tmp/zsign/bin/zsign /usr/local/bin/zsign \
+# Download pre-built zsign binary from GitHub releases
+# Using the Linux x86_64 binary
+RUN curl -L https://github.com/zhlynn/zsign/releases/download/v1.1.2/zsign_linux_amd64 -o /usr/local/bin/zsign \
     && chmod +x /usr/local/bin/zsign \
-    && rm -rf /tmp/zsign
-
-# Verify zsign is installed
-RUN zsign -v
+    && zsign -v
 
 # Set working directory
 WORKDIR /app
