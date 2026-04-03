@@ -1,5 +1,5 @@
 import fs from "fs";
-import * as forge from "node-forge";
+import forge from "node-forge";
 
 export interface CertInfo {
   name: string;
@@ -30,10 +30,13 @@ export async function checkCertificate(
     console.log(`[checkCertificate] Read P12 file, size: ${p12Buffer.length} bytes`);
     const p12BinaryString = p12Buffer.toString('binary');
     console.log(`[checkCertificate] Converted to binary string, length: ${p12BinaryString.length}`);
+    console.log(`[checkCertificate] forge type: ${typeof forge}`);
     console.log(`[checkCertificate] forge.asn1 available: ${!!forge.asn1}`);
     console.log(`[checkCertificate] forge.asn1.fromDer available: ${typeof forge.asn1.fromDer}`);
     
-    if (!forge.asn1 || typeof forge.asn1.fromDer !== 'function') {
+    if (!forge || !forge.asn1 || typeof forge.asn1.fromDer !== 'function') {
+      console.log(`[checkCertificate] forge:`, forge);
+      console.log(`[checkCertificate] forge.asn1:`, forge?.asn1);
       return { success: false, error: "node-forge library not properly initialized" };
     }
     
