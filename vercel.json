@@ -1,9 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "pnpm install && cd client && pnpm build",
+  "buildCommand": "pnpm vercel-build",
   "outputDirectory": "client/dist",
-  "installCommand": "echo skip",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "installCommand": "pnpm install"
 }
