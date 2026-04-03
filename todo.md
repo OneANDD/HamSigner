@@ -69,3 +69,17 @@
 - [x] Update app selector to disable IPA upload when pre-configured app is selected
 - [x] Show IPA file info when pre-configured app is selected
 - [x] Keep Custom IPA option to allow user uploads
+
+
+## Bug Fixes - Runtime Errors
+- [x] Fix zsign ENOENT error when signing IPA (improved error message)
+- [x] Fix OpenSSL tools missing for certificate checking (replaced with node-forge)
+- [x] Fix OpenSSL tools missing for password changing (replaced with node-forge)
+- [x] Ensure all system tools are available in production runtime (node-forge is npm package)
+
+
+## Docker Setup
+- [x] Create Node.js Dockerfile with zsign binary
+- [x] Create docker-compose.yml for local testing
+- [x] Create .dockerignore file
+- [x] Create DOCKER_DEPLOYMENT.md with deployment instructions

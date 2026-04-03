@@ -64,8 +64,17 @@ export async function signIpa(input: SigningInput): Promise<SigningResult> {
 
     return { success: true };
   } catch (err: unknown) {
-    const execErr = err as { stderr?: string; stdout?: string; message?: string };
+    const execErr = err as { stderr?: string; stdout?: string; message?: string; code?: string };
     const raw = execErr.stderr || execErr.stdout || execErr.message || String(err);
+    
+    // Check if zsign binary is not found
+    if (execErr.code === 'ENOENT' || raw.includes('ENOENT')) {
+      return { 
+        success: false, 
+        error: "IPA signing service is not available in this environment. zsign binary is required but not installed. Please deploy to an environment with zsign installed or use a container."
+      };
+    }
+    
     return { success: false, error: parseZsignError(raw) };
   }
 }

@@ -1,10 +1,5 @@
-import { execFile } from "child_process";
-import { promisify } from "util";
 import fs from "fs";
-import path from "path";
-import os from "os";
-
-const execFileAsync = promisify(execFile);
+import * as forge from "node-forge";
 
 export interface CertInfo {
   name: string;
@@ -18,7 +13,8 @@ export interface CertInfo {
 }
 
 /**
- * Uses openssl to extract certificate information from a P12 file.
+ * Uses node-forge to extract certificate information from a P12 file.
+ * No external dependencies required.
  */
 export async function checkCertificate(
   p12Path: string,
@@ -29,151 +25,94 @@ export async function checkCertificate(
   }
 
   try {
-    // Extract certificate from P12
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cert-check-"));
-    const certPath = path.join(tmpDir, "cert.pem");
+    // Read P12 file
+    const p12Der = fs.readFileSync(p12Path);
+    const p12Asn1 = forge.asn1.fromDer(p12Der.toString("binary"));
 
-    const args = [
-      "pkcs12",
-      "-in", p12Path,
-      "-out", certPath,
-      "-clcerts",
-      "-nokeys",
-    ];
-
-    if (password) {
-      args.push("-passin", `pass:${password}`);
-    } else {
-      args.push("-passin", "pass:");
-    }
-
+    // Decrypt P12
+    let pkcs12: any;
     try {
-      await execFileAsync("openssl", args, { timeout: 30_000 });
+      pkcs12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, password || "");
     } catch (err: unknown) {
-      const execErr = err as { stderr?: string };
-      const errMsg = execErr.stderr || String(err);
-      if (errMsg.toLowerCase().includes("password")) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.toLowerCase().includes("password") || errMsg.toLowerCase().includes("decrypt")) {
         return { success: false, error: "Incorrect P12 password" };
       }
       return { success: false, error: "Failed to read P12 file" };
     }
 
-    if (!fs.existsSync(certPath)) {
+    // Extract certificates
+    const certs = pkcs12.getBags({ bagType: forge.pki.oids.certBag });
+    if (!certs || !certs[forge.pki.oids.certBag] || certs[forge.pki.oids.certBag].length === 0) {
+      return { success: false, error: "No certificate found in P12 file" };
+    }
+
+    // Get the first certificate (usually the signing certificate)
+    const certBag = certs[forge.pki.oids.certBag][0];
+    const cert = certBag.cert;
+
+    if (!cert) {
       return { success: false, error: "Failed to extract certificate" };
     }
 
-    // Parse certificate with openssl x509
-    const { stdout: textOutput } = await execFileAsync("openssl", [
-      "x509",
-      "-in", certPath,
-      "-text",
-      "-noout",
-    ], { timeout: 30_000 });
+    // Extract certificate information
+    const now = new Date();
+    const expiryDate = new Date(cert.validity.notAfter);
+    const daysRemaining = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Extract key information
-    const cert = parseCertificateText(textOutput);
+    // Extract subject CN
+    let name = "Unknown";
+    if (cert.subject && cert.subject.attributes) {
+      const cnAttr = (cert.subject.attributes as any[]).find((attr: any) => attr.name === "commonName");
+      if (cnAttr) {
+        name = cnAttr.value;
+      }
+    }
 
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    // Extract issuer
+    let issuer = "Unknown";
+    if (cert.issuer && cert.issuer.attributes) {
+      const cnAttr = (cert.issuer.attributes as any[]).find((attr: any) => attr.name === "commonName");
+      if (cnAttr) {
+        issuer = cnAttr.value;
+      }
+    }
 
-    return { success: true, cert };
+    // Extract serial number
+    const serialNumber = cert.serialNumber ? cert.serialNumber.toString(16).toUpperCase() : "Unknown";
+
+    // Extract signature algorithm
+    let algorithm = "Unknown";
+    if ((cert as any).signatureOid) {
+      const oidName = (forge.pki.oids as any)[(cert as any).signatureOid];
+      algorithm = oidName || (cert as any).signatureOid;
+    }
+
+    const certInfo: CertInfo = {
+      name,
+      issued: cert.validity.notBefore.toISOString(),
+      expires: expiryDate.toISOString(),
+      daysRemaining,
+      isExpired: now > expiryDate,
+      issuer,
+      serialNumber,
+      algorithm,
+    };
+
+    return { success: true, cert: certInfo };
   } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+    const errMsg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: `Failed to check certificate: ${errMsg}` };
   }
 }
 
 /**
- * Parses openssl x509 text output to extract certificate info.
- */
-function parseCertificateText(text: string): CertInfo {
-  const lines = text.split("\n");
-
-  // Subject (certificate name)
-  let name = "Unknown";
-  for (const line of lines) {
-    if (line.includes("Subject:")) {
-      const match = line.match(/CN\s*=\s*([^,]+)/);
-      if (match) name = match[1].trim();
-      break;
-    }
-  }
-
-  // Issuer
-  let issuer = "Unknown";
-  for (const line of lines) {
-    if (line.includes("Issuer:")) {
-      const match = line.match(/CN\s*=\s*([^,]+)/);
-      if (match) issuer = match[1].trim();
-      break;
-    }
-  }
-
-  // Serial Number
-  let serialNumber = "Unknown";
-  for (const line of lines) {
-    if (line.includes("Serial Number:")) {
-      serialNumber = line.split("Serial Number:")[1].trim();
-      break;
-    }
-  }
-
-  // Public Key Algorithm
-  let algorithm = "Unknown";
-  for (const line of lines) {
-    if (line.includes("Public-Key:")) {
-      algorithm = line.trim();
-      break;
-    }
-  }
-
-  // Not Before (Issued)
-  let issued = "Unknown";
-  for (const line of lines) {
-    if (line.includes("Not Before:")) {
-      issued = line.split("Not Before:")[1].trim();
-      break;
-    }
-  }
-
-  // Not After (Expires)
-  let expires = "Unknown";
-  let expiresDate: Date | null = null;
-  for (const line of lines) {
-    if (line.includes("Not After :")) {
-      expires = line.split("Not After :")[1].trim();
-      expiresDate = new Date(expires);
-      break;
-    }
-  }
-
-  // Calculate days remaining
-  const now = new Date();
-  let daysRemaining = 0;
-  let isExpired = false;
-
-  if (expiresDate) {
-    const diff = expiresDate.getTime() - now.getTime();
-    daysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    isExpired = daysRemaining < 0;
-  }
-
-  return {
-    name,
-    issued,
-    expires,
-    daysRemaining: Math.max(0, daysRemaining),
-    isExpired,
-    issuer,
-    serialNumber,
-    algorithm,
-  };
-}
-
-/**
- * Changes the password of a P12 certificate file.
+ * Changes the password of a P12 certificate file using node-forge.
+ * Returns a new P12 file with the updated password.
  */
 export async function changeCertificatePassword(
   p12Path: string,
-  currentPassword: string,
+  oldPassword: string,
   newPassword: string,
   outputPath: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -182,32 +121,47 @@ export async function changeCertificatePassword(
   }
 
   try {
-    const args = [
-      "pkcs12",
-      "-in", p12Path,
-      "-out", outputPath,
-      "-export",
-      "-passin", `pass:${currentPassword}`,
-      "-passout", `pass:${newPassword}`,
-    ];
+    // Read and decrypt the original P12
+    const p12Der = fs.readFileSync(p12Path);
+    const p12Asn1 = forge.asn1.fromDer(p12Der.toString("binary"));
 
+    let pkcs12: any;
     try {
-      await execFileAsync("openssl", args, { timeout: 30_000 });
+      pkcs12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, oldPassword);
     } catch (err: unknown) {
-      const execErr = err as { stderr?: string };
-      const errMsg = execErr.stderr || String(err);
-      if (errMsg.toLowerCase().includes("password")) {
-        return { success: false, error: "Incorrect current password" };
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.toLowerCase().includes("password") || errMsg.toLowerCase().includes("decrypt")) {
+        return { success: false, error: "Incorrect old password" };
       }
-      return { success: false, error: "Failed to process P12 file" };
+      return { success: false, error: "Failed to read P12 file" };
     }
 
-    if (!fs.existsSync(outputPath)) {
-      return { success: false, error: "Failed to create new P12 file" };
+    // Extract private key and certificates
+    const keyBags = pkcs12.getBags({ bagType: forge.pki.oids.keyBag });
+    const certBags = pkcs12.getBags({ bagType: forge.pki.oids.certBag });
+
+    if (!keyBags || !keyBags[forge.pki.oids.keyBag] || keyBags[forge.pki.oids.keyBag].length === 0) {
+      return { success: false, error: "No private key found in P12 file" };
     }
+
+    const privateKey = (keyBags[forge.pki.oids.keyBag][0] as any).key;
+    const certificates = certBags ? (certBags[forge.pki.oids.certBag] || []).map((b: any) => b.cert) : [];
+
+    // Re-encrypt with new password
+    const newP12Asn1 = forge.pkcs12.toPkcs12Asn1(
+      privateKey,
+      certificates,
+      newPassword,
+      { algorithm: "3des" }
+    );
+
+    // Convert to DER and write
+    const newP12Der = forge.asn1.toDer(newP12Asn1).getBytes();
+    fs.writeFileSync(outputPath, Buffer.from(newP12Der, "binary"));
 
     return { success: true };
   } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+    const errMsg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: `Failed to change password: ${errMsg}` };
   }
 }
