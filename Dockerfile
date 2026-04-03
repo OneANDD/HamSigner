@@ -23,8 +23,9 @@ RUN curl -L https://github.com/zhlynn/zsign/releases/download/v1.0.0/zsign-linux
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files and patches directory first
 COPY package.json pnpm-lock.yaml ./
+COPY patches ./patches
 
 # Install Node.js dependencies
 RUN npm install -g pnpm && pnpm install --frozen-lockfile
