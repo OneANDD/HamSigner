@@ -4,6 +4,7 @@ import os from "os";
 import path from "path";
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
+import https from "https";
 import { storagePut } from "./storage";
 import { createSigningJob, updateSigningJob, getSigningJob } from "./db";
 import { signIpa, extractIpaMetadata, generateManifestPlist } from "./signingService";
@@ -47,7 +48,19 @@ const uploadFields = upload.fields([
   { name: "mobileprovision", maxCount: 1 },
 ]);
 
-// POST /api/sign — accepts multipart form with ipa, p12, mobileprovision, password
+// Helper to download file from URL
+function downloadFile(url: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    https.get(url, (response) => {
+      const chunks: Buffer[] = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => resolve(Buffer.concat(chunks)));
+      response.on('error', reject);
+    }).on('error', reject);
+  });
+}
+
+// POST /api/sign — accepts multipart form with (ipa OR ipaUrl), p12, mobileprovision, password
 router.post("/sign", (req: Request, res: Response) => {
   uploadFields(req, res, async (err) => {
     if (err) {
@@ -55,34 +68,57 @@ router.post("/sign", (req: Request, res: Response) => {
     }
 
     const files = req.files as Record<string, Express.Multer.File[]>;
+    const ipaUrl: string | undefined = (req.body?.ipaUrl as string) || undefined;
     const ipaFile = files?.ipa?.[0];
     const p12File = files?.p12?.[0];
     const provFile = files?.mobileprovision?.[0];
     const password: string = (req.body?.password as string) ?? "";
 
-    if (!ipaFile || !p12File || !provFile) {
-      return res.status(400).json({ error: "Missing required files: ipa, p12, mobileprovision" });
+    if ((!ipaFile && !ipaUrl) || !p12File || !provFile) {
+      return res.status(400).json({ error: "Missing required files: (ipa or ipaUrl), p12, mobileprovision" });
     }
 
     const jobId = uuidv4();
-    const tmpDir = path.dirname(ipaFile.path);
+    let tmpDir: string;
+    let ipaPath: string;
+    let ipaOriginalName: string;
+
+    // If ipaUrl is provided, download it; otherwise use uploaded file
+    if (ipaUrl) {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ipa-download-"));
+      try {
+        const ipaBuffer = await downloadFile(ipaUrl);
+        ipaOriginalName = ipaUrl.split('/').pop() || 'app.ipa';
+        ipaPath = path.join(tmpDir, ipaOriginalName);
+        fs.writeFileSync(ipaPath, ipaBuffer);
+      } catch (downloadErr: unknown) {
+        const msg = downloadErr instanceof Error ? downloadErr.message : String(downloadErr);
+        return res.status(400).json({ error: `Failed to download IPA: ${msg}` });
+      }
+    } else if (ipaFile) {
+      ipaPath = ipaFile.path;
+      ipaOriginalName = ipaFile.originalname;
+      tmpDir = path.dirname(ipaPath);
+    } else {
+      return res.status(400).json({ error: "No IPA file or URL provided" });
+    }
 
     try {
       // Create job record
       await createSigningJob({
         id: jobId,
         status: "uploading",
-        originalIpaName: ipaFile.originalname,
+        originalIpaName: ipaOriginalName,
       });
 
       // ---- Sign the IPA ----
       await updateSigningJob(jobId, { status: "signing" });
 
-      const signedIpaName = `signed_${ipaFile.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const signedIpaName = `signed_${ipaOriginalName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const outputPath = path.join(tmpDir, signedIpaName);
 
       const signingResult = await signIpa({
-        ipaPath: ipaFile.path,
+        ipaPath: ipaPath,
         p12Path: p12File.path,
         provPath: provFile.path,
         password,
@@ -99,7 +135,7 @@ router.post("/sign", (req: Request, res: Response) => {
 
       // ---- Extract metadata ----
       const meta = await extractIpaMetadata(outputPath);
-      const appName = meta.appName || ipaFile.originalname.replace(/\.ipa$/i, "");
+      const appName = meta.appName || ipaOriginalName.replace(/\.ipa$/i, "");
       const bundleId = meta.bundleId || "com.unknown.app";
       const appVersion = meta.appVersion || "1.0";
 

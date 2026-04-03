@@ -61,3 +61,11 @@
 
 ## Credits Section Update
 - [x] Add Astear17 credit card to homepage with GitHub link and description
+
+## IPA Files Integration
+- [x] Clone Astear17/iPASigner repository to get IPA files
+- [x] Download KSign, ESign, Feather, GBox, Scarlet IPA files
+- [x] Upload IPA files to S3 and get CDN URLs
+- [x] Update app selector to disable IPA upload when pre-configured app is selected
+- [x] Show IPA file info when pre-configured app is selected
+- [x] Keep Custom IPA option to allow user uploads
