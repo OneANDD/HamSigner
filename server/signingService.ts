@@ -161,7 +161,7 @@ function extractPlistValue(plist: string, key: string): string | undefined {
 }
 
 /**
- * Generates an ITMS manifest plist XML string.
+ * Generates an ITMS manifest plist XML string (minified format).
  */
 export function generateManifestPlist(opts: {
   ipaUrl: string;
@@ -170,37 +170,7 @@ export function generateManifestPlist(opts: {
   appName: string;
 }): string {
   const { ipaUrl, bundleId, appVersion, appName } = opts;
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>items</key>
-  <array>
-    <dict>
-      <key>assets</key>
-      <array>
-        <dict>
-          <key>kind</key>
-          <string>software-package</string>
-          <key>url</key>
-          <string>${escapeXml(ipaUrl)}</string>
-        </dict>
-      </array>
-      <key>metadata</key>
-      <dict>
-        <key>bundle-identifier</key>
-        <string>${escapeXml(bundleId)}</string>
-        <key>bundle-version</key>
-        <string>${escapeXml(appVersion)}</string>
-        <key>kind</key>
-        <string>software</string>
-        <key>title</key>
-        <string>${escapeXml(appName)}</string>
-      </dict>
-    </dict>
-  </array>
-</dict>
-</plist>`;
+  return `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>items</key><array><dict><key>assets</key><array><dict><key>kind</key><string>software-package</string><key>url</key><string>${escapeXml(ipaUrl)}</string></dict></array><key>metadata</key><dict><key>bundle-identifier</key><string>${escapeXml(bundleId)}</string><key>bundle-version</key><string>${escapeXml(appVersion)}</string><key>kind</key><string>software</string><key>title</key><string>${escapeXml(appName)}</string></dict></dict></array></dict></plist>`;
 }
 
 function escapeXml(str: string): string {
